@@ -97,7 +97,8 @@ public class PlayerController : MonoBehaviour
 
     private void Move()
     {
-        Vector2 input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+        // GetAxis는 입력을 0에서 1까지 채워주기 때문에 가속과 감속이 붙는다.
+        Vector2 input = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
         if (input.sqrMagnitude > 1f)
             input.Normalize();
 
