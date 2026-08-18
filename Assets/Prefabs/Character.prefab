@@ -1222,8 +1222,6 @@ GameObject:
   - component: {fileID: 3470071072188526345}
   - component: {fileID: 7775892434558871091}
   - component: {fileID: 3823238725892314604}
-  - component: {fileID: 3823238725892314605}
-  - component: {fileID: 3823238725892314606}
   m_Layer: 0
   m_Name: Character
   m_TagString: Untagged
@@ -1284,12 +1282,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 4279541069908522419}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f835f039a2a22d3498971064135f2c01, type: 3}
+  m_Script: {fileID: 11500000, guid: e02b583f228adbf4d99279e55e2ba345, type: 3}
   m_Name:
   m_EditorClassIdentifier:
   moveSpeed: 3
   gravity: -20
   jumpHeight: 1
+  cameraPivot: {fileID: 4068409281164929054}
+  mouseSensitivity: 2
+  minPitch: -80
+  maxPitch: 80
   spineBones:
   - {fileID: 8651556011995560974}
   - {fileID: 2813971490376935654}
@@ -1297,39 +1299,11 @@ MonoBehaviour:
   turnThreshold: 45
   bodyTurnSpeed: 360
   spinePitchWeight: 0.6
-  animator: {fileID: 1057805748035726048}
-  animationDamp: 0.1
---- !u!114 &3823238725892314605
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4279541069908522419}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e56888b7c28f9974ca82f65d8b0c6d46, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
-  mouseSensitivity: 2
-  minPitch: -80
-  maxPitch: 80
---- !u!114 &3823238725892314606
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4279541069908522419}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f47ec8bd47556e34c830635230bd92bb, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
-  cameraPivot: {fileID: 4068409281164929054}
   hideOwnBody: 0
   bodyRenderers:
   - {fileID: 3590042445876645150}
+  animator: {fileID: 1057805748035726048}
+  animationDamp: 0.1
 --- !u!1 &4769499361937883249
 GameObject:
   m_ObjectHideFlags: 0
