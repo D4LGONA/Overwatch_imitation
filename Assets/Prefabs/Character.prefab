@@ -1222,6 +1222,7 @@ GameObject:
   - component: {fileID: 3470071072188526345}
   - component: {fileID: 7775892434558871091}
   - component: {fileID: 3823238725892314604}
+  - component: {fileID: 7249547298627835301}
   m_Layer: 0
   m_Name: Character
   m_TagString: Untagged
@@ -1283,11 +1284,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e02b583f228adbf4d99279e55e2ba345, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   moveSpeed: 3
   gravity: -20
   jumpHeight: 1
+  input: {fileID: 7249547298627835301}
   cameraPivot: {fileID: 4068409281164929054}
   mouseSensitivity: 2
   minPitch: -80
@@ -1304,6 +1306,24 @@ MonoBehaviour:
   - {fileID: 3590042445876645150}
   animator: {fileID: 1057805748035726048}
   animationDamp: 0.1
+--- !u!114 &7249547298627835301
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4279541069908522419}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: adbda589d1826024f861b0d235fde08e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  jumpKey: 32
+  primaryKey: 323
+  secondaryKey: 324
+  ability1Key: 304
+  ability2Key: 101
+  ultimateKey: 113
 --- !u!1 &4769499361937883249
 GameObject:
   m_ObjectHideFlags: 0

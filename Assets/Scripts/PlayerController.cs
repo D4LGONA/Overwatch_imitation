@@ -9,6 +9,10 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float gravity = -20f;
     [SerializeField] private float jumpHeight = 1f;
 
+    [Header("Input")]
+    [Tooltip("비워두면 같은 오브젝트에서 찾는다.")]
+    [SerializeField] private InputReader input;
+
     [Header("Look")]
     [SerializeField] private Transform cameraPivot;
     [SerializeField] private float mouseSensitivity = 2f;
@@ -46,9 +50,30 @@ public class PlayerController : MonoBehaviour
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
+        if (input == null)
+            input = GetComponent<InputReader>();
         if (animator == null)
             animator = GetComponentInChildren<Animator>();
         aimYaw = transform.eulerAngles.y;
+    }
+
+    // 구독과 해지는 항상 짝으로 둔다. 종료 순서에 따라 input이 먼저 파괴될 수 있어
+    // 해지 쪽은 null을 확인한다.
+    private void OnEnable()
+    {
+        input.JumpPressed += OnJumpPressed;
+    }
+
+    private void OnDisable()
+    {
+        if (input != null)
+            input.JumpPressed -= OnJumpPressed;
+    }
+
+    private void OnJumpPressed()
+    {
+        if (controller.isGrounded)
+            verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
     }
 
     private void Start()
@@ -93,32 +118,27 @@ public class PlayerController : MonoBehaviour
 
     private void Look()
     {
-        aimYaw += Input.GetAxis("Mouse X") * mouseSensitivity;
-        pitch = Mathf.Clamp(pitch - Input.GetAxis("Mouse Y") * mouseSensitivity, minPitch, maxPitch);
+        aimYaw += input.Look.x * mouseSensitivity;
+        pitch = Mathf.Clamp(pitch - input.Look.y * mouseSensitivity, minPitch, maxPitch);
     }
 
     private void Move()
     {
-        // GetAxis는 입력을 0에서 1까지 채워주기 때문에 가속과 감속이 붙는다.
-        Vector2 input = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
-        if (input.sqrMagnitude > 1f)
-            input.Normalize();
+        Vector2 move = input.Move;
+        if (move.sqrMagnitude > 1f)
+            move.Normalize();
 
-        TurnBody(input.sqrMagnitude > 0.01f);
+        TurnBody(move.sqrMagnitude > 0.01f);
 
-        if (controller.isGrounded)
-        {
-            // 착지 상태에서 살짝 눌러줘야 CharacterController가 경사면에서 붕 뜨지 않는다.
-            if (verticalVelocity < 0f)
-                verticalVelocity = -2f;
+        // 착지 상태에서 살짝 눌러줘야 CharacterController가 경사면에서 붕 뜨지 않는다.
+        // 점프로 이미 위로 튄 프레임을 덮지 않도록 하강 중일 때만 누른다.
+        if (controller.isGrounded && verticalVelocity < 0f)
+            verticalVelocity = -2f;
 
-            if (Input.GetButtonDown("Jump"))
-                verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
-        }
         verticalVelocity += gravity * Time.deltaTime;
 
         // 이동은 에임 기준, 걷기 애니메이션은 하체 기준이라 축을 따로 잡는다.
-        Vector3 worldMove = Quaternion.Euler(0f, aimYaw, 0f) * new Vector3(input.x, 0f, input.y);
+        Vector3 worldMove = Quaternion.Euler(0f, aimYaw, 0f) * new Vector3(move.x, 0f, move.y);
         Vector3 velocity = worldMove * moveSpeed;
         velocity.y = verticalVelocity;
         controller.Move(velocity * Time.deltaTime);

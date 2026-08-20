@@ -395,7 +395,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1001 &2036315689
+--- !u!1001 &1358881599
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -406,17 +406,17 @@ PrefabInstance:
     - target: {fileID: 3470071072188526345, guid: a1e206a79bc93304b8e60c72cc79fa13,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: -1.0136405
+      value: -0.5745814
       objectReference: {fileID: 0}
     - target: {fileID: 3470071072188526345, guid: a1e206a79bc93304b8e60c72cc79fa13,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.00000011920929
+      value: -0.00000023841858
       objectReference: {fileID: 0}
     - target: {fileID: 3470071072188526345, guid: a1e206a79bc93304b8e60c72cc79fa13,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.08721197
+      value: 1.0205611
       objectReference: {fileID: 0}
     - target: {fileID: 3470071072188526345, guid: a1e206a79bc93304b8e60c72cc79fa13,
         type: 3}
@@ -458,11 +458,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Character
       objectReference: {fileID: 0}
-    - target: {fileID: 7775892434558871091, guid: a1e206a79bc93304b8e60c72cc79fa13,
-        type: 3}
-      propertyPath: m_SkinWidth
-      value: 0.001
-      objectReference: {fileID: 0}
     - target: {fileID: 9072483402362077558, guid: a1e206a79bc93304b8e60c72cc79fa13,
         type: 3}
       propertyPath: m_BackGroundColor.a
@@ -495,4 +490,4 @@ SceneRoots:
   - {fileID: 410087041}
   - {fileID: 832575519}
   - {fileID: 1113950549}
-  - {fileID: 2036315689}
+  - {fileID: 1358881599}
