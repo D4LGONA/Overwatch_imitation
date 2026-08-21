@@ -6,32 +6,153 @@ public class Tracer : MonoBehaviour
     [Tooltip("비워두면 같은 오브젝트에서 찾는다.")]
     [SerializeField] private InputReader input;
 
+    [Header("Pulse Pistols")]
+    [Tooltip("레이가 나가는 기준. 비워두면 자식 카메라를 쓴다.")]
+    [SerializeField] private Transform aimSource;
+    [Tooltip("초당 발사 수.")]
+    [SerializeField] private float fireRate = 40f;
+    [Tooltip("탄퍼짐 반각. 이 각도의 원뿔 안에서 방향이 정해진다.")]
+    [SerializeField] private float spreadAngle = 2.2f;
+    [SerializeField] private float range = 50f;
+    [SerializeField] private LayerMask hitMask = ~0;
+
+    [Header("Ammo")]
+    [SerializeField] private int magazineSize = 40;
+    [SerializeField] private float reloadTime = 1f;
+
+    [Tooltip("비워두면 씬에서 찾는다. 이 무기의 탄퍼짐을 조준선에 알려준다.")]
+    [SerializeField] private Crosshair crosshair;
+
+    private float nextFireTime;
+    private int ammo;
+    private float reloadEndTime;
+    private bool isReloading;
+
     private void Awake()
     {
         if (input == null)
             input = GetComponent<InputReader>();
+        if (aimSource == null)
+            aimSource = GetComponentInChildren<Camera>().transform;
     }
 
-    private void OnEnable()
+    // 프리팹은 씬 오브젝트를 참조할 수 없어서 인스펙터로 꽂아둘 수 없다.
+    private void Start()
+    {
+        ammo = magazineSize;
+
+        if (crosshair == null)
+            crosshair = FindObjectOfType<Crosshair>();
+        if (crosshair != null)
+            crosshair.SetSpread(spreadAngle);
+    }
+
+    private void OnEnable() // 이벤트 구독
     {
         input.AbilityPressed += HandleAbility;
     }
 
-    private void OnDisable()
+    private void OnDisable() // 이벤트 구독 해제
     {
         if (input != null)
             input.AbilityPressed -= HandleAbility;
+    }
+
+    private void Update()
+    {
+        if (isReloading)
+        {
+            if (Time.time < reloadEndTime)
+                return;
+
+            ammo = magazineSize;
+            isReloading = false;
+            // 재장전이 끝난 순간부터 다시 세야 밀린 발사가 몰리지 않는다.
+            nextFireTime = Time.time;
+            Debug.Log($"[Tracer] 재장전 완료 ({ammo}발)");
+        }
+
+        // 연사는 눌린 순간이 아니라 누르고 있는 동안이라 이벤트로는 처리할 수 없다.
+        if (input.IsHeld(AbilitySlot.Primary))
+        {
+            // while로 도는 이유는 프레임보다 발사 간격이 짧을 수 있어서다. 60fps에서
+            // 한 프레임은 16.7ms인데 초당 40발이면 25ms마다 쏴야 하므로, 프레임당
+            // 한 발로 묶으면 설정값보다 느려진다. nextFireTime을 더해서 누적하면
+            // 프레임이 밀려도 발사율이 유지된다.
+            while (Time.time >= nextFireTime)
+            {
+                // 탄창이 비면 알아서 재장전에 들어간다.
+                if (ammo <= 0)
+                {
+                    StartReload();
+                    break;
+                }
+
+                FirePulsePistols();
+                ammo--;
+                nextFireTime += 1f / fireRate;
+            }
+        }
+        else
+        {
+            // 쉬는 동안 밀린 발사가 쌓였다가 한꺼번에 터지지 않도록 맞춰둔다.
+            nextFireTime = Time.time;
+        }
     }
 
     private void HandleAbility(AbilitySlot slot)
     {
         switch (slot)
         {
-            case AbilitySlot.Primary:   Debug.Log("[Tracer] 펄스 권총");   break;
-            case AbilitySlot.Secondary: Debug.Log("[Tracer] 보조 공격");   break;
-            case AbilitySlot.Ability1:  Debug.Log("[Tracer] 점멸");        break;
-            case AbilitySlot.Ability2:  Debug.Log("[Tracer] 귀환");        break;
-            case AbilitySlot.Ultimate:  Debug.Log("[Tracer] 펄스 폭탄");   break;
+            case AbilitySlot.Secondary: Debug.Log("[Tracer] 보조 공격"); break;
+            case AbilitySlot.Ability1:  Debug.Log("[Tracer] 스킬1"); break;
+            case AbilitySlot.Ability2:  Debug.Log("[Tracer] 스킬2"); break;
+            case AbilitySlot.Ultimate:  Debug.Log("[Tracer] 궁극기"); break;
+            case AbilitySlot.Punch:     Debug.Log("[Tracer] 근접공격"); break;
+            case AbilitySlot.Reload:    StartReload(); break;
         }
+    }
+
+    private void StartReload()
+    {
+        // 이미 가득 찼거나 재장전 중이면 다시 시작하지 않는다. 재장전 중에 R을
+        // 연타해도 시간이 늘어나면 안 된다.
+        if (isReloading || ammo == magazineSize)
+            return;
+
+        isReloading = true;
+        reloadEndTime = Time.time + reloadTime;
+        Debug.Log("[Tracer] 재장전 시작");
+    }
+
+    private void FirePulsePistols()
+    {
+        Vector3 origin = aimSource.position;
+        Vector3 direction = SpreadDirection(aimSource.forward, spreadAngle); // 탄퍼짐
+
+        if (Physics.Raycast(origin, direction, out RaycastHit hit, range, hitMask))
+        {
+            Debug.DrawLine(origin, hit.point, Color.red, 0.3f);
+            MarkHit(hit.point);
+        }
+    }
+
+    // 각도를 1미터 앞에서의 반지름으로 바꾼다. 방향을 흩뜨리므로 퍼짐이
+    // 거리에 비례해 커지는 원뿔이 된다.
+    private Vector3 SpreadDirection(Vector3 forward, float angleDeg)
+    {
+        Vector2 offset = Random.insideUnitCircle * Mathf.Tan(angleDeg * Mathf.Deg2Rad);
+        return (forward + aimSource.right * offset.x + aimSource.up * offset.y).normalized;
+    }
+
+    // 체력이 생기기 전까지 맞은 자리를 눈으로 확인하는 임시 표시.
+    private void MarkHit(Vector3 point)
+    {
+        GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        marker.transform.position = point;
+        marker.transform.localScale = Vector3.one * 0.08f;
+        // 콜라이더를 남기면 다음 탄이 이 표시에 맞는다.
+        Destroy(marker.GetComponent<Collider>());
+        Destroy(marker, 1f);
     }
 }

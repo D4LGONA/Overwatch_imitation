@@ -9,6 +9,8 @@ public enum AbilitySlot
     Ability1,
     Ability2,
     Ultimate,
+    Punch,
+    Reload,
 }
 
 // 키를 읽어 논리적인 입력으로 바꾼다. 키 설정이 이 파일에만 있으므로
@@ -22,6 +24,8 @@ public class InputReader : MonoBehaviour
     [SerializeField] private KeyCode ability1Key = KeyCode.LeftShift;
     [SerializeField] private KeyCode ability2Key = KeyCode.E;
     [SerializeField] private KeyCode ultimateKey = KeyCode.Q;
+    [SerializeField] private KeyCode punchKey = KeyCode.V;
+    [SerializeField] private KeyCode reloadKey = KeyCode.R;
 
     // 상태는 프로퍼티로 노출한다. "지금 얼마나 기울어져 있나"라서 매 프레임 읽어야 한다.
     public Vector2 Move { get; private set; }
@@ -46,12 +50,36 @@ public class InputReader : MonoBehaviour
         Fire(ability1Key, AbilitySlot.Ability1);
         Fire(ability2Key, AbilitySlot.Ability2);
         Fire(ultimateKey, AbilitySlot.Ultimate);
+        Fire(punchKey, AbilitySlot.Punch);
+        Fire(reloadKey, AbilitySlot.Reload);
     }
 
     private void Fire(KeyCode key, AbilitySlot slot)
     {
         if (true == Input.GetKeyDown(key))
             AbilityPressed?.Invoke(slot);
+    }
+
+    // 누르고 있는 동안 계속 나가는 능력이 쓴다. 트레이서 펄스 권총처럼
+    // 연사하는 무기는 눌린 순간만으로는 부족하다.
+    public bool IsHeld(AbilitySlot slot)
+    {
+        return Input.GetKey(KeyOf(slot));
+    }
+
+    private KeyCode KeyOf(AbilitySlot slot)
+    {
+        switch (slot)
+        {
+            case AbilitySlot.Primary:   return primaryKey;
+            case AbilitySlot.Secondary: return secondaryKey;
+            case AbilitySlot.Ability1:  return ability1Key;
+            case AbilitySlot.Ability2:  return ability2Key;
+            case AbilitySlot.Ultimate:  return ultimateKey;
+            case AbilitySlot.Punch:     return punchKey;
+            case AbilitySlot.Reload:    return reloadKey;
+            default:                    return KeyCode.None;
+        }
     }
 
     // 구독자가 해지를 빠뜨린 채 이 오브젝트가 사라져도 참조가 남지 않도록 비운다.
