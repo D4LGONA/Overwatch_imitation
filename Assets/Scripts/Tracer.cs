@@ -16,12 +16,19 @@ public class Tracer : MonoBehaviour
     [SerializeField] private float range = 50f;
     [SerializeField] private LayerMask hitMask = ~0;
 
+    [Tooltip("한 발당 피해량.")]
+    [SerializeField] private float damage = 6f;
+
     [Header("Ammo")]
     [SerializeField] private int magazineSize = 40;
     [SerializeField] private float reloadTime = 1f;
 
     [Tooltip("비워두면 씬에서 찾는다. 이 무기의 탄퍼짐을 조준선에 알려준다.")]
     [SerializeField] private Crosshair crosshair;
+    [Tooltip("비워두면 씬에서 찾는다.")]
+    [SerializeField] private PlayerHUD hud;
+
+    private Health health;
 
     private float nextFireTime;
     private int ammo;
@@ -34,6 +41,10 @@ public class Tracer : MonoBehaviour
             input = GetComponent<InputReader>();
         if (aimSource == null)
             aimSource = GetComponentInChildren<Camera>().transform;
+
+        // 체력은 UI를 모르게 두고 캐릭터가 중계한다. 적도 같은 Health를 쓰지만
+        // 내 HUD에 뜨는 건 내 것뿐이어야 하기 때문이다.
+        health = GetComponent<Health>();
     }
 
     // 프리팹은 씬 오브젝트를 참조할 수 없어서 인스펙터로 꽂아둘 수 없다.
@@ -41,21 +52,45 @@ public class Tracer : MonoBehaviour
     {
         ammo = magazineSize;
 
+        // 프리팹은 씬 오브젝트를 참조할 수 없어서 실행할 때 찾는다.
         if (crosshair == null)
             crosshair = FindObjectOfType<Crosshair>();
         if (crosshair != null)
             crosshair.SetSpread(spreadAngle);
+
+        if (hud == null)
+            hud = FindObjectOfType<PlayerHUD>();
+
+        PushAmmo();
+        if (health != null)
+            OnHealthChanged(health.Current, health.Max);
+    }
+
+    private void OnHealthChanged(float current, float max)
+    {
+        if (hud != null)
+            hud.SetHealth(current, max);
+    }
+
+    private void PushAmmo()
+    {
+        if (hud != null)
+            hud.SetAmmo(ammo, magazineSize);
     }
 
     private void OnEnable() // 이벤트 구독
     {
         input.AbilityPressed += HandleAbility;
+        if (health != null)
+            health.Changed += OnHealthChanged;
     }
 
     private void OnDisable() // 이벤트 구독 해제
     {
         if (input != null)
             input.AbilityPressed -= HandleAbility;
+        if (health != null)
+            health.Changed -= OnHealthChanged;
     }
 
     private void Update()
@@ -69,7 +104,7 @@ public class Tracer : MonoBehaviour
             isReloading = false;
             // 재장전이 끝난 순간부터 다시 세야 밀린 발사가 몰리지 않는다.
             nextFireTime = Time.time;
-            Debug.Log($"[Tracer] 재장전 완료 ({ammo}발)");
+            PushAmmo();
         }
 
         // 연사는 눌린 순간이 아니라 누르고 있는 동안이라 이벤트로는 처리할 수 없다.
@@ -90,6 +125,7 @@ public class Tracer : MonoBehaviour
 
                 FirePulsePistols();
                 ammo--;
+                PushAmmo();
                 nextFireTime += 1f / fireRate;
             }
         }
@@ -134,6 +170,13 @@ public class Tracer : MonoBehaviour
         {
             Debug.DrawLine(origin, hit.point, Color.red, 0.3f);
             MarkHit(hit.point);
+
+            // 팀이 다를 때만 맞는다. 아군 관통은 대상이 생긴 뒤에 RaycastAll로 넣는다.
+            if (hit.collider.TryGetComponent(out Health target)
+                && (health == null || target.Team != health.Team))
+            {
+                target.TakeDamage(damage);
+            }
         }
     }
 
