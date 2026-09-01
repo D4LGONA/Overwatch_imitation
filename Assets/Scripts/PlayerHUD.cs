@@ -14,6 +14,11 @@ public class PlayerHUD : MonoBehaviour
     [SerializeField] private Image healthFill;
     [SerializeField] private TMP_Text healthText;
 
+    [Header("Abilities")]
+    [SerializeField] private AbilitySlotUI ability1;
+    [SerializeField] private AbilitySlotUI ability2;
+    [SerializeField] private AbilitySlotUI ultimate;
+
     public void SetAmmo(int current, int max)
     {
         if (ammoText != null)
@@ -27,5 +32,23 @@ public class PlayerHUD : MonoBehaviour
 
         if (healthText != null)
             healthText.text = $"{Mathf.CeilToInt(current)} / {Mathf.CeilToInt(max)}";
+    }
+
+    public void SetAbility(AbilitySlot slot, int charges, int maxCharges, float progress)
+    {
+        AbilitySlotUI target = SlotUI(slot);
+        if (target != null)
+            target.Set(charges, maxCharges, progress);
+    }
+
+    private AbilitySlotUI SlotUI(AbilitySlot slot)
+    {
+        switch (slot)
+        {
+            case AbilitySlot.Ability1: return ability1;
+            case AbilitySlot.Ability2: return ability2;
+            case AbilitySlot.Ultimate: return ultimate;
+            default:                   return null;
+        }
     }
 }

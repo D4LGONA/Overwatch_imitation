@@ -23,17 +23,28 @@ public class Tracer : MonoBehaviour
     [SerializeField] private int magazineSize = 40;
     [SerializeField] private float reloadTime = 1f;
 
+    [Header("Blink")]
+    [SerializeField] private float blinkDistance = 7f;
+    [Tooltip("동시에 들고 있을 수 있는 충전 수.")]
+    [SerializeField] private int blinkCharges = 3;
+    [Tooltip("충전 하나가 다시 차는 데 걸리는 시간.")]
+    [SerializeField] private float blinkRechargeTime = 3f;
+
     [Tooltip("비워두면 씬에서 찾는다. 이 무기의 탄퍼짐을 조준선에 알려준다.")]
     [SerializeField] private Crosshair crosshair;
     [Tooltip("비워두면 씬에서 찾는다.")]
     [SerializeField] private PlayerHUD hud;
 
     private Health health;
+    private CharacterController controller;
 
     private float nextFireTime;
     private int ammo;
     private float reloadEndTime;
     private bool isReloading;
+
+    private int blinkStock;
+    private float nextChargeTime;
 
     private void Awake()
     {
@@ -45,12 +56,14 @@ public class Tracer : MonoBehaviour
         // 체력은 UI를 모르게 두고 캐릭터가 중계한다. 적도 같은 Health를 쓰지만
         // 내 HUD에 뜨는 건 내 것뿐이어야 하기 때문이다.
         health = GetComponent<Health>();
+        controller = GetComponent<CharacterController>();
     }
 
     // 프리팹은 씬 오브젝트를 참조할 수 없어서 인스펙터로 꽂아둘 수 없다.
     private void Start()
     {
         ammo = magazineSize;
+        blinkStock = blinkCharges;
 
         // 프리팹은 씬 오브젝트를 참조할 수 없어서 실행할 때 찾는다.
         if (crosshair == null)
@@ -95,6 +108,8 @@ public class Tracer : MonoBehaviour
 
     private void Update()
     {
+        RechargeBlink();
+
         if (isReloading)
         {
             if (Time.time < reloadEndTime)
@@ -140,13 +155,66 @@ public class Tracer : MonoBehaviour
     {
         switch (slot)
         {
-            case AbilitySlot.Secondary: Debug.Log("[Tracer] 보조 공격"); break;
-            case AbilitySlot.Ability1:  Debug.Log("[Tracer] 스킬1"); break;
+            // 점멸은 Shift와 우클릭 어느 쪽으로도 나간다.
+            case AbilitySlot.Secondary:
+            case AbilitySlot.Ability1:
+                Blink();
+                break;
             case AbilitySlot.Ability2:  Debug.Log("[Tracer] 스킬2"); break;
             case AbilitySlot.Ultimate:  Debug.Log("[Tracer] 궁극기"); break;
             case AbilitySlot.Punch:     Debug.Log("[Tracer] 근접공격"); break;
             case AbilitySlot.Reload:    StartReload(); break;
         }
+    }
+
+    // 충전은 하나씩 따로 차지 않고 순서대로 하나씩 채워진다. 가득 차 있으면
+    // 타이머를 계속 미뤄서, 한 발 쓴 직후부터 3초를 세게 만든다.
+    private void RechargeBlink()
+    {
+        if (blinkStock >= blinkCharges)
+        {
+            nextChargeTime = Time.time + blinkRechargeTime;
+        }
+        else if (Time.time >= nextChargeTime)
+        {
+            blinkStock++;
+            nextChargeTime = Time.time + blinkRechargeTime;
+        }
+
+        PushBlink();
+    }
+
+    private void PushBlink()
+    {
+        if (hud == null)
+            return;
+
+        // 남은 시간을 진행도로 바꾼다. 가득 차 있으면 UI가 알아서 덮개를 걷는다.
+        float remaining = Mathf.Max(0f, nextChargeTime - Time.time);
+        float progress = 1f - remaining / blinkRechargeTime;
+        hud.SetAbility(AbilitySlot.Ability1, blinkStock, blinkCharges, progress);
+    }
+
+    private void Blink()
+    {
+        if (blinkStock <= 0)
+            return;
+
+        // 오버워치 점멸은 보는 방향이 아니라 이동 입력 방향으로 나간다.
+        // 아무 키도 안 누르고 있으면 정면이다.
+        Vector2 move = input.Move;
+        Vector3 local = move.sqrMagnitude > 0.01f
+            ? new Vector3(move.x, 0f, move.y).normalized
+            : Vector3.forward;
+
+        // 이동과 같은 기준을 써야 시야 방향과 어긋나지 않는다.
+        Vector3 direction = Quaternion.Euler(0f, aimSource.eulerAngles.y, 0f) * local;
+
+        // Move를 쓰면 벽을 통과하지 않고 CharacterController가 알아서 막아준다.
+        controller.Move(direction * blinkDistance);
+
+        blinkStock--;
+        PushBlink();
     }
 
     private void StartReload()
