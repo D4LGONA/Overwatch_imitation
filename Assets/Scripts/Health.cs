@@ -31,9 +31,12 @@ public class Health : MonoBehaviour
         Changed?.Invoke(Current, maxHealth);
     }
 
+    // 되감기처럼 잠시 피해를 받지 않아야 하는 구간에서 켠다.
+    public bool IsInvulnerable { get; set; }
+
     public void TakeDamage(float amount)
     {
-        if (!IsAlive)
+        if (!IsAlive || IsInvulnerable)
             return;
 
         Current = Mathf.Max(0f, Current - amount);
@@ -42,6 +45,14 @@ public class Health : MonoBehaviour
 
         if (!IsAlive)
             Debug.Log($"[Health] {name} 사망");
+    }
+
+    // 되감기처럼 과거 값을 그대로 되돌릴 때 쓴다. 피해나 회복이 아니라서
+    // Damaged는 울리지 않는다.
+    public void SetCurrent(float value)
+    {
+        Current = Mathf.Clamp(value, 0f, maxHealth);
+        Changed?.Invoke(Current, maxHealth);
     }
 
     public void Heal(float amount)

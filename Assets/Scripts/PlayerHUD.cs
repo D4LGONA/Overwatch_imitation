@@ -34,11 +34,11 @@ public class PlayerHUD : MonoBehaviour
             healthText.text = $"{Mathf.CeilToInt(current)} / {Mathf.CeilToInt(max)}";
     }
 
-    public void SetAbility(AbilitySlot slot, int charges, int maxCharges, float progress)
+    public void SetAbility(AbilitySlot slot, int charges, int maxCharges, float progress, float remaining)
     {
         AbilitySlotUI target = SlotUI(slot);
         if (target != null)
-            target.Set(charges, maxCharges, progress);
+            target.Set(charges, maxCharges, progress, remaining);
     }
 
     private AbilitySlotUI SlotUI(AbilitySlot slot)

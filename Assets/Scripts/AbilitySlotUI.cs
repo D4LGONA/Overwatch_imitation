@@ -11,12 +11,14 @@ public class AbilitySlotUI : MonoBehaviour
     [SerializeField] private Image cooldownFill;
     [Tooltip("남은 충전 수. 최대가 1이면 자동으로 숨긴다.")]
     [SerializeField] private TMP_Text countText;
+    [Tooltip("다음 충전까지 남은 초. 충전이 가득 차면 숨긴다.")]
+    [SerializeField] private TMP_Text cooldownText;
 
     [SerializeField] private Color readyColor = Color.white;
     [SerializeField] private Color emptyColor = new Color(0.35f, 0.35f, 0.35f, 1f);
 
-    // progress는 다음 충전까지의 진행도(0~1). 가득 차 있으면 1을 넘긴다.
-    public void Set(int charges, int maxCharges, float progress)
+    // progress는 다음 충전까지의 진행도(0~1), remaining은 남은 초.
+    public void Set(int charges, int maxCharges, float progress, float remaining)
     {
         if (icon != null)
             icon.color = charges > 0 ? readyColor : emptyColor;
@@ -31,6 +33,15 @@ public class AbilitySlotUI : MonoBehaviour
             countText.gameObject.SetActive(showCount);
             if (showCount)
                 countText.text = charges.ToString();
+        }
+
+        if (cooldownText != null)
+        {
+            // 가득 차 있으면 셀 것이 없다.
+            bool charging = charges < maxCharges;
+            cooldownText.gameObject.SetActive(charging);
+            if (charging)
+                cooldownText.text = Mathf.CeilToInt(remaining).ToString();
         }
     }
 }
