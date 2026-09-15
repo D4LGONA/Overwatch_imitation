@@ -32,6 +32,19 @@ public class Tracer : MonoBehaviour
     [Tooltip("충전 하나가 다시 차는 데 걸리는 시간.")]
     [SerializeField] private float blinkRechargeTime = 3f;
 
+    [Header("Pulse Bomb")]
+    [SerializeField] private PulseBomb pulseBombPrefab;
+    [SerializeField] private float throwSpeed = 20f;
+    [Tooltip("캐릭터 몸에 걸리지 않도록 앞으로 띄우는 거리.")]
+    [SerializeField] private float throwOffset = 1f;
+
+    [Header("Melee")]
+    [SerializeField] private float meleeDamage = 30f;
+    [SerializeField] private float meleeRange = 2.5f;
+    [Tooltip("판정 굵기. 레이 한 줄이면 빗나가기 쉬워 구체로 훑는다.")]
+    [SerializeField] private float meleeRadius = 0.4f;
+    [SerializeField] private float meleeCooldown = 0.8f;
+
     [Header("Recall")]
     [Tooltip("몇 초 전 상태로 돌아갈지.")]
     [SerializeField] private float recallWindow = 3f;
@@ -68,6 +81,8 @@ public class Tracer : MonoBehaviour
     private float recallReadyTime;
     private bool isRecalling;
     private PlayerController movement;
+    private float meleeReadyTime;
+    private UltimateCharge ultimate;
 
     private void Awake()
     {
@@ -81,6 +96,7 @@ public class Tracer : MonoBehaviour
         health = GetComponent<Health>();
         controller = GetComponent<CharacterController>();
         movement = GetComponent<PlayerController>();
+        ultimate = GetComponent<UltimateCharge>();
     }
 
     // 프리팹은 씬 오브젝트를 참조할 수 없어서 인스펙터로 꽂아둘 수 없다.
@@ -101,6 +117,8 @@ public class Tracer : MonoBehaviour
         PushAmmo();
         if (health != null)
             OnHealthChanged(health.Current, health.Max);
+        if (ultimate != null)
+            OnUltimateChanged(ultimate.Ratio);
     }
 
     private void OnHealthChanged(float current, float max)
@@ -120,6 +138,8 @@ public class Tracer : MonoBehaviour
         input.AbilityPressed += HandleAbility;
         if (health != null)
             health.Changed += OnHealthChanged;
+        if (ultimate != null)
+            ultimate.Changed += OnUltimateChanged;
     }
 
     private void OnDisable() // 이벤트 구독 해제
@@ -128,6 +148,14 @@ public class Tracer : MonoBehaviour
             input.AbilityPressed -= HandleAbility;
         if (health != null)
             health.Changed -= OnHealthChanged;
+        if (ultimate != null)
+            ultimate.Changed -= OnUltimateChanged;
+    }
+
+    private void OnUltimateChanged(float ratio)
+    {
+        if (hud != null)
+            hud.SetUltimate(ratio);
     }
 
     private void Update()
@@ -195,8 +223,8 @@ public class Tracer : MonoBehaviour
                 Blink();
                 break;
             case AbilitySlot.Ability2:  Recall(); break;
-            case AbilitySlot.Ultimate:  Debug.Log("[Tracer] 궁극기"); break;
-            case AbilitySlot.Punch:     Debug.Log("[Tracer] 근접공격"); break;
+            case AbilitySlot.Ultimate:   ThrowPulseBomb(); break;
+            case AbilitySlot.Punch:      Melee(); break;
             case AbilitySlot.Reload:    StartReload(); break;
         }
     }
@@ -330,6 +358,43 @@ public class Tracer : MonoBehaviour
         hud.SetAbility(AbilitySlot.Ability2, remaining > 0f ? 0 : 1, 1, progress, remaining);
     }
 
+    private void ThrowPulseBomb()
+    {
+        if (pulseBombPrefab == null || ultimate == null || !ultimate.IsReady)
+            return;
+
+        Vector3 origin = aimSource.position + aimSource.forward * throwOffset;
+        PulseBomb bomb = Instantiate(pulseBombPrefab, origin, aimSource.rotation);
+        bomb.Launch(aimSource.forward * throwSpeed, health != null ? health.Team : 0, ultimate);
+
+        ultimate.Consume();
+    }
+
+    // 적에게 준 피해만 궁극기를 채운다. 아군 오사나 자해로는 차면 안 된다.
+    private void DealDamage(Health target, float amount)
+    {
+        target.TakeDamage(amount);
+        if (ultimate != null)
+            ultimate.Add(amount);
+    }
+
+    private void Melee()
+    {
+        if (Time.time < meleeReadyTime)
+            return;
+
+        meleeReadyTime = Time.time + meleeCooldown;
+
+        // 레이 한 줄이면 가까이 붙은 상대도 놓치기 쉬워서 구체로 훑는다.
+        if (Physics.SphereCast(aimSource.position, meleeRadius, aimSource.forward,
+                out RaycastHit hit, meleeRange, hitMask)
+            && hit.collider.TryGetComponent(out Health target)
+            && (health == null || target.Team != health.Team))
+        {
+            DealDamage(target, meleeDamage);
+        }
+    }
+
     private void Blink()
     {
         if (blinkStock <= 0)
@@ -378,7 +443,7 @@ public class Tracer : MonoBehaviour
             if (hit.collider.TryGetComponent(out Health target)
                 && (health == null || target.Team != health.Team))
             {
-                target.TakeDamage(damage);
+                DealDamage(target, damage);
             }
         }
     }

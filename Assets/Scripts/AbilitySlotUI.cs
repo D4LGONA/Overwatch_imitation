@@ -44,4 +44,27 @@ public class AbilitySlotUI : MonoBehaviour
                 cooldownText.text = Mathf.CeilToInt(remaining).ToString();
         }
     }
+
+    // 궁극기는 쿨다운이 아니라 차오르는 게이지라 방향과 표기가 반대다.
+    // 덮개가 걷히는 대신 채워지고, 숫자는 남은 초가 아니라 퍼센트다.
+    public void SetUltimate(float ratio)
+    {
+        bool ready = ratio >= 1f;
+
+        if (icon != null)
+            icon.color = ready ? readyColor : emptyColor;
+
+        if (cooldownFill != null)
+            cooldownFill.fillAmount = Mathf.Clamp01(ratio);
+
+        if (countText != null)
+            countText.gameObject.SetActive(false);
+
+        if (cooldownText != null)
+        {
+            cooldownText.gameObject.SetActive(!ready);
+            if (!ready)
+                cooldownText.text = $"{Mathf.FloorToInt(ratio * 100f)}%";
+        }
+    }
 }

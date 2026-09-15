@@ -41,6 +41,12 @@ public class PlayerHUD : MonoBehaviour
             target.Set(charges, maxCharges, progress, remaining);
     }
 
+    public void SetUltimate(float ratio)
+    {
+        if (ultimate != null)
+            ultimate.SetUltimate(ratio);
+    }
+
     private AbilitySlotUI SlotUI(AbilitySlot slot)
     {
         switch (slot)

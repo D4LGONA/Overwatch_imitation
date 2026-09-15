@@ -503,6 +503,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1030164270 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 368432760077078948, guid: bc05b42c5ff2eba49b62acbec22b5b61,
+    type: 3}
+  m_PrefabInstance: {fileID: 1643990067}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f2774841aa6c954f99483fb3aaa792f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1087769496
 GameObject:
   m_ObjectHideFlags: 0
@@ -1184,6 +1196,10 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 1766800015}
+    - targetCorrespondingSourceObject: {fileID: 4279541069908522419, guid: a1e206a79bc93304b8e60c72cc79fa13,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1766800017}
   m_SourcePrefab: {fileID: 100100000, guid: a1e206a79bc93304b8e60c72cc79fa13, type: 3}
 --- !u!1 &1598962549
 GameObject:
@@ -1622,6 +1638,14 @@ MonoBehaviour:
   blinkDistance: 7
   blinkCharges: 3
   blinkRechargeTime: 3
+  pulseBombPrefab: {fileID: 844206732142477375, guid: 916966affb3d81545b9b6b13ea214d1d,
+    type: 3}
+  throwSpeed: 5
+  throwOffset: 1
+  meleeDamage: 30
+  meleeRange: 2.5
+  meleeRadius: 0.4
+  meleeCooldown: 0.8
   recallWindow: 3
   recallCooldown: 12
   recallDuration: 1
@@ -1641,6 +1665,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxHealth: 150
   team: 0
+--- !u!114 &1766800017
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1766800008}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f83a5b65291a09b4dbdcc6c310278510, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  required: 200
+  passivePerSecond: 4
 --- !u!1001 &1830058818
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1989,7 +2027,7 @@ MonoBehaviour:
   healthText: {fileID: 2070701523}
   ability1: {fileID: 2015024301}
   ability2: {fileID: 1739830140}
-  ultimate: {fileID: 0}
+  ultimate: {fileID: 1030164270}
 --- !u!224 &2015024298 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 7420373153595821904, guid: bc05b42c5ff2eba49b62acbec22b5b61,
