@@ -387,7 +387,7 @@ public class Tracer : MonoBehaviour
 
         // 레이 한 줄이면 가까이 붙은 상대도 놓치기 쉬워서 구체로 훑는다.
         if (Physics.SphereCast(aimSource.position, meleeRadius, aimSource.forward,
-                out RaycastHit hit, meleeRange, hitMask)
+                out RaycastHit hit, meleeRange, hitMask, QueryTriggerInteraction.Ignore)
             && hit.collider.TryGetComponent(out Health target)
             && (health == null || target.Team != health.Team))
         {
@@ -434,7 +434,8 @@ public class Tracer : MonoBehaviour
         Vector3 origin = aimSource.position;
         Vector3 direction = SpreadDirection(aimSource.forward, spreadAngle); // 탄퍼짐
 
-        if (Physics.Raycast(origin, direction, out RaycastHit hit, range, hitMask))
+        // 거점 영역 같은 트리거에 막히지 않도록 트리거는 무시한다.
+        if (Physics.Raycast(origin, direction, out RaycastHit hit, range, hitMask, QueryTriggerInteraction.Ignore))
         {
             Debug.DrawLine(origin, hit.point, Color.red, 0.3f);
             MarkHit(hit.point);
