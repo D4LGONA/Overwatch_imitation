@@ -365,7 +365,7 @@ public class Tracer : MonoBehaviour
 
         Vector3 origin = aimSource.position + aimSource.forward * throwOffset;
         PulseBomb bomb = Instantiate(pulseBombPrefab, origin, aimSource.rotation);
-        bomb.Launch(aimSource.forward * throwSpeed, health != null ? health.Team : 0, ultimate);
+        bomb.Launch(aimSource.forward * throwSpeed, health);
 
         ultimate.Consume();
     }

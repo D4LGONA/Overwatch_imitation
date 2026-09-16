@@ -15,8 +15,7 @@ public class PulseBomb : MonoBehaviour
     [SerializeField] private LayerMask damageMask = ~0;
 
     private Rigidbody body;
-    private int ownerTeam;
-    private UltimateCharge ownerCharge;
+    private Health owner;
     private bool attached;
 
     private void Awake()
@@ -24,10 +23,10 @@ public class PulseBomb : MonoBehaviour
         body = GetComponent<Rigidbody>();
     }
 
-    public void Launch(Vector3 velocity, int team, UltimateCharge charge)
+    // 궁극기 게이지는 넘겨받지 않는다. 궁극기 피해로 다시 궁극기가 차면 안 된다.
+    public void Launch(Vector3 velocity, Health thrower)
     {
-        ownerTeam = team;
-        ownerCharge = charge;
+        owner = thrower;
         body.velocity = velocity;
     }
 
@@ -54,16 +53,14 @@ public class PulseBomb : MonoBehaviour
             if (!col.TryGetComponent(out Health target) || !hit.Add(target))
                 continue;
 
-            if (target.Team == ownerTeam)
+            // 아군은 피해를 입지 않지만 던진 본인은 휘말린다.
+            bool isOwner = target == owner;
+            if (!isOwner && owner != null && target.Team == owner.Team)
                 continue;
 
             float distance = Vector3.Distance(transform.position, target.transform.position);
             float falloff = Mathf.Lerp(1f, minDamageRatio, Mathf.Clamp01(distance / radius));
-            float damage = maxDamage * falloff;
-
-            target.TakeDamage(damage);
-            if (ownerCharge != null)
-                ownerCharge.Add(damage);
+            target.TakeDamage(maxDamage * falloff);
         }
 
         Destroy(gameObject);
