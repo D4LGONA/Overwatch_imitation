@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 // 공격팀이 영역 안에 있으면 점령 게이지가 찬다. 영역은 이 오브젝트의 트리거 콜라이더다.
@@ -7,6 +8,8 @@ using UnityEngine;
 public class CapturePoint : MonoBehaviour
 {
     [SerializeField] private string pointName = "A";
+    [Tooltip("거점 위에 이름을 띄우는 텍스트. Point Name을 바꾸면 따라 바뀐다.")]
+    [SerializeField] private TMP_Text nameLabel;
     [Tooltip("점령할 수 있는 팀.")]
     [SerializeField] private int attackingTeam;
     [Tooltip("처음부터 끝까지 채우는 데 걸리는 시간.")]
@@ -36,6 +39,25 @@ public class CapturePoint : MonoBehaviour
     {
         GetComponent<Collider>().isTrigger = true;
         IsLocked = startsLocked;
+        ApplyName();
+    }
+
+#if UNITY_EDITOR
+    // 인스펙터에서 이름을 바꾸면 플레이하지 않아도 바로 보이게 한다. OnValidate 안에서
+    // UI를 직접 건드리면 경고가 나서 한 프레임 미뤄 적용한다.
+    private void OnValidate()
+    {
+        UnityEditor.EditorApplication.delayCall += ApplyName;
+    }
+#endif
+
+    private void ApplyName()
+    {
+        // 미뤄진 호출이 도착하기 전에 오브젝트가 지워졌을 수 있다.
+        if (this == null || nameLabel == null)
+            return;
+
+        nameLabel.text = pointName;
     }
 
     public void Unlock()
