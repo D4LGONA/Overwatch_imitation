@@ -64,6 +64,10 @@ public class InputReader : MonoBehaviour
     // 연사하는 무기는 눌린 순간만으로는 부족하다.
     public bool IsHeld(AbilitySlot slot)
     {
+        // 키보드를 직접 읽는 함수라 꺼져 있어도 동작해버린다. 꺼졌으면 안 눌린 것으로 친다.
+        if (!enabled)
+            return false;
+
         return Input.GetKey(KeyOf(slot));
     }
 
@@ -83,6 +87,14 @@ public class InputReader : MonoBehaviour
     }
 
     // 구독자가 해지를 빠뜨린 채 이 오브젝트가 사라져도 참조가 남지 않도록 비운다.
+    // 꺼질 때 마지막 입력을 비운다. 안 비우면 마지막 프레임의 마우스 움직임이 남아서
+    // 꺼진 뒤에도 카메라가 계속 돈다.
+    private void OnDisable()
+    {
+        Move = Vector2.zero;
+        Look = Vector2.zero;
+    }
+
     private void OnDestroy()
     {
         JumpPressed = null;

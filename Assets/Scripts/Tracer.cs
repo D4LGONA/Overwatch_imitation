@@ -476,7 +476,7 @@ public class Tracer : MonoBehaviour
         if (Physics.Raycast(origin, direction, out RaycastHit hit, range, hitMask, QueryTriggerInteraction.Ignore))
         {
             Debug.DrawLine(origin, hit.point, Color.red, 0.3f);
-            MarkHit(hit.point);
+            MarkHit(hit.point, Quaternion.LookRotation(hit.normal));
 
             // 팀이 다를 때만 맞는다. 아군 관통은 대상이 생긴 뒤에 RaycastAll로 넣는다.
             if (hit.collider.TryGetComponent(out Health target)
@@ -496,13 +496,8 @@ public class Tracer : MonoBehaviour
     }
 
     // 체력이 생기기 전까지 맞은 자리를 눈으로 확인하는 임시 표시.
-    private void MarkHit(Vector3 point)
+    private void MarkHit(Vector3 point, Quaternion rot)
     {
-        GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        marker.transform.position = point;
-        marker.transform.localScale = Vector3.one * 0.08f;
-        // 콜라이더를 남기면 다음 탄이 이 표시에 맞는다.
-        Destroy(marker.GetComponent<Collider>());
-        Destroy(marker, 1f);
+        GameManager.Instance.HitEffects.Get(point, rot);
     }
 }
