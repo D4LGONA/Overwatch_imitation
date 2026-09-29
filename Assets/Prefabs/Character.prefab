@@ -1226,6 +1226,7 @@ GameObject:
   - component: {fileID: 8741390679496816965}
   - component: {fileID: 5409765763593929517}
   - component: {fileID: 5015224608205269650}
+  - component: {fileID: 961807924754525638}
   m_Layer: 6
   m_Name: Character
   m_TagString: Untagged
@@ -1396,6 +1397,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   required: 200
   passivePerSecond: 4
+--- !u!114 &961807924754525638
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4279541069908522419}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e136d26cfa0b4c579cf631eb522e18e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  respawnDelay: 3
+  spawnPoints: []
+  disableWhileDead:
+  - {fileID: 3823238725892314604}
 --- !u!1 &4769499361937883249
 GameObject:
   m_ObjectHideFlags: 0
@@ -2311,7 +2328,7 @@ GameObject:
   - component: {fileID: 4162037141240783804}
   m_Layer: 6
   m_Name: Camera
-  m_TagString: Untagged
+  m_TagString: MainCamera
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

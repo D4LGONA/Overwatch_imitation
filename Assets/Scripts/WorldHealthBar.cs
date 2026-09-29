@@ -71,8 +71,9 @@ public class WorldHealthBar : MonoBehaviour
             return;
         }
 
-        // 카메라와 같은 방향을 보게 두면 화면에 항상 정면으로 나타난다.
+        // 돌리는 건 체력바(visual)이지 이 스크립트가 붙은 오브젝트가 아니다. 캐릭터 본체에
+        // 붙여도 캐릭터까지 같이 돌아가면 안 된다.
         if (viewCamera != null)
-            transform.rotation = viewCamera.transform.rotation;
+            visual.transform.rotation = viewCamera.transform.rotation;
     }
 }

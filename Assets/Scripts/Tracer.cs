@@ -137,7 +137,10 @@ public class Tracer : MonoBehaviour
     {
         input.AbilityPressed += HandleAbility;
         if (health != null)
+        {
             health.Changed += OnHealthChanged;
+            health.Revived += OnRevived;
+        }
         if (ultimate != null)
             ultimate.Changed += OnUltimateChanged;
     }
@@ -147,10 +150,31 @@ public class Tracer : MonoBehaviour
         if (input != null)
             input.AbilityPressed -= HandleAbility;
         if (health != null)
+        {
             health.Changed -= OnHealthChanged;
+            health.Revived -= OnRevived;
+        }
         if (ultimate != null)
             ultimate.Changed -= OnUltimateChanged;
     }
+
+    // 부활하면 새로 태어난 것처럼 채운다. 궁극기 게이지는 원작처럼 죽어도 유지한다.
+    private void OnRevived()
+    {
+        ammo = magazineSize;
+        isReloading = false;
+        nextFireTime = Time.time;
+
+        blinkStock = blinkCharges;
+        recallReadyTime = 0f;
+
+        // 죽기 전 경로가 남아 있으면 부활하자마자 되감기로 죽은 자리에 돌아갈 수 있다.
+        history.Clear();
+
+        PushAmmo();
+    }
+
+    private bool IsDead => health != null && !health.IsAlive;
 
     private void OnUltimateChanged(float ratio)
     {
@@ -160,6 +184,15 @@ public class Tracer : MonoBehaviour
 
     private void Update()
     {
+        // 죽었을 때 이 컴포넌트를 꺼버리면 HUD 갱신까지 멈춘다. 그래서 끄는 대신
+        // 행동만 막고, 게이지 같은 표시는 계속 흐르게 둔다.
+        if (IsDead)
+        {
+            RechargeBlink();
+            PushRecall();
+            return;
+        }
+
         // 되감는 동안은 기록도 사격도 멈춘다. 기록이 계속되면 되돌아가는
         // 위치들이 히스토리에 섞여 다음 되감기가 엉뚱한 곳으로 간다.
         if (isRecalling)
@@ -215,6 +248,9 @@ public class Tracer : MonoBehaviour
 
     private void HandleAbility(AbilitySlot slot)
     {
+        if (IsDead)
+            return;
+
         switch (slot)
         {
             // 점멸은 Shift와 우클릭 어느 쪽으로도 나간다.
@@ -293,8 +329,9 @@ public class Tracer : MonoBehaviour
             movement.enabled = false;
         if (health != null)
             health.IsInvulnerable = true;
-        // 켜져 있으면 위치를 직접 넣어도 컨트롤러가 도로 덮어쓴다.
-        controller.enabled = false;
+        // 콜라이더는 끄지 않는다. 끄면 Unity가 OnTriggerExit을 부르지 않아서, 되감기로
+        // 거점을 빠져나가도 거점은 아직 안에 있다고 여긴다. 위치를 직접 옮겨도
+        // 컨트롤러가 덮어쓰는 건 Move를 부를 때뿐인데, 이동은 위에서 막아뒀다.
 
         // 구간마다 길이가 제각각이라 시간을 똑같이 나누면 속도가 들쭉날쭉해진다.
         // 특히 점멸은 한 구간이 7미터라 그 지점만 홱 튄다. 누적 거리를 미리 재두고
@@ -328,7 +365,8 @@ public class Tracer : MonoBehaviour
         }
 
         transform.position = past.Position;
-        controller.enabled = true;
+        // 다시 걷기 시작할 때 Move가 옛 위치에서 출발하지 않도록 물리 쪽 위치를 맞춘다.
+        Physics.SyncTransforms();
 
         if (health != null)
         {

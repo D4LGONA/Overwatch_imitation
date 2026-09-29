@@ -20,6 +20,10 @@ public class Health : MonoBehaviour
     // 피격에 반응해야 하는 쪽이 쓴다.
     public event Action Damaged;
 
+    // 체력이 0이 된 순간과, 부활한 순간. 죽음에 반응할 쪽(조작 정지, AI 정지, 리스폰)이 쓴다.
+    public event Action Died;
+    public event Action Revived;
+
     private void Awake()
     {
         Current = maxHealth;
@@ -44,7 +48,19 @@ public class Health : MonoBehaviour
         Damaged?.Invoke();
 
         if (!IsAlive)
+        {
             Debug.Log($"[Health] {name} 사망");
+            Died?.Invoke();
+        }
+    }
+
+    // 체력을 가득 채워 되살린다. 죽어 있을 때만 의미가 있다.
+    public void Revive()
+    {
+        Current = maxHealth;
+        IsInvulnerable = false;
+        Changed?.Invoke(Current, maxHealth);
+        Revived?.Invoke();
     }
 
     // 되감기처럼 과거 값을 그대로 되돌릴 때 쓴다. 피해나 회복이 아니라서
@@ -68,5 +84,7 @@ public class Health : MonoBehaviour
     {
         Changed = null;
         Damaged = null;
+        Died = null;
+        Revived = null;
     }
 }
