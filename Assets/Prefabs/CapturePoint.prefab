@@ -86,6 +86,7 @@ GameObject:
   - component: {fileID: 3518859231851099981}
   - component: {fileID: 7409027108263831346}
   - component: {fileID: 7853967617928104930}
+  - component: {fileID: 7012759343803106653}
   m_Layer: 0
   m_Name: CapturePoint
   m_TagString: Untagged
@@ -151,6 +152,25 @@ MonoBehaviour:
   decayPerSecond: 0.05
   startsLocked: 0
   next: {fileID: 0}
+--- !u!114 &7012759343803106653
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3203597311276867614}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffff
 --- !u!1 &4548294886371033117
 GameObject:
   m_ObjectHideFlags: 0
@@ -395,7 +415,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7815536779688113987}
-  m_LocalRotation: {x: 0.067834005, y: 0.6403304, z: -0.056929823, w: 0.7629774}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0

@@ -24,12 +24,16 @@ public class CapturePoint : MonoBehaviour
     [SerializeField] private CapturePoint next;
 
     private readonly HashSet<Health> attackersInside = new HashSet<Health>();
+    private readonly HashSet<Health> defendersInside = new HashSet<Health>();
     private float floor;
 
     public string PointName => pointName;
     public float Progress { get; private set; }
     public bool IsLocked { get; private set; }
     public bool IsCaptured { get; private set; }
+
+    // 양 팀이 함께 안에 있어서 게이지가 멈춘 상태. UI에서 "경합 중"을 띄울 때 쓴다.
+    public bool IsContested { get; private set; }
 
     public event Action<float> ProgressChanged;
     public event Action<CapturePoint> Captured;
@@ -74,14 +78,22 @@ public class CapturePoint : MonoBehaviour
     // Health를 직접 갖고 있지 않아서 걸러진다.
     private void OnTriggerEnter(Collider other)
     {
-        if (other.TryGetComponent(out Health health) && health.Team == attackingTeam)
+        if (!other.TryGetComponent(out Health health))
+            return;
+
+        if (health.Team == attackingTeam)
             attackersInside.Add(health);
+        else
+            defendersInside.Add(health);
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.TryGetComponent(out Health health))
-            attackersInside.Remove(health);
+        if (!other.TryGetComponent(out Health health))
+            return;
+
+        attackersInside.Remove(health);
+        defendersInside.Remove(health);
     }
 
     private void Update()
@@ -91,12 +103,18 @@ public class CapturePoint : MonoBehaviour
 
         // 안에서 죽거나 사라지면 나가기 이벤트가 오지 않아서 직접 치운다.
         attackersInside.RemoveWhere(h => h == null || !h.IsAlive);
+        defendersInside.RemoveWhere(h => h == null || !h.IsAlive);
+
+        bool attackers = attackersInside.Count > 0;
+        bool defenders = defendersInside.Count > 0;
+        IsContested = attackers && defenders;
 
         float before = Progress;
 
-        if (attackersInside.Count > 0)
+        // 공격팀만 있으면 차고, 공격팀이 없으면 떨어지고, 둘 다 있으면 그대로 멈춘다.
+        if (attackers && !defenders)
             Progress = Mathf.Min(1f, Progress + Time.deltaTime / captureTime);
-        else
+        else if (!attackers)
             Progress = Mathf.Max(floor, Progress - decayPerSecond * Time.deltaTime);
 
         UpdateCheckpoint();
@@ -126,6 +144,8 @@ public class CapturePoint : MonoBehaviour
     {
         IsCaptured = true;
         attackersInside.Clear();
+        defendersInside.Clear();
+        IsContested = false;
         Debug.Log($"[CapturePoint] {pointName} 점령 완료");
 
         Captured?.Invoke(this);
