@@ -19,14 +19,6 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float minPitch = -80f;
     [SerializeField] private float maxPitch = 80f;
 
-    [Header("Upper Body")]
-    [Tooltip("골반에서 가슴 순서로. 에임 오프셋을 이 본들에 나눠 싣는다.")]
-    [SerializeField] private Transform[] spineBones;
-    [Tooltip("멈춰 있을 때 하체가 따라 돌기 시작하는 상체 비틀림 각도.")]
-    [SerializeField] private float turnThreshold = 45f;
-    [SerializeField] private float bodyTurnSpeed = 360f;
-    [SerializeField] private float spinePitchWeight = 0.6f;
-
     [Header("First Person")]
     [Tooltip("내려다볼 때 자기 몸이 화면에 들어오는 걸 막는다. 3인칭으로 확인할 땐 꺼라.")]
     [SerializeField] private bool hideOwnBody = true;
@@ -43,6 +35,7 @@ public class PlayerController : MonoBehaviour
     private static readonly int VerticalVelocity = Animator.StringToHash("VerticalVelocity");
 
     private CharacterController controller;
+    private UpperBodyAim aim;
     private float aimYaw;
     private float pitch;
     private float verticalVelocity;
@@ -54,6 +47,12 @@ public class PlayerController : MonoBehaviour
             input = GetComponent<InputReader>();
         if (animator == null)
             animator = GetComponentInChildren<Animator>();
+
+        // 프리팹에 안 붙어 있어도 돌아가게 없으면 만든다. 척추 본은 이름으로 알아서 찾는다.
+        aim = GetComponent<UpperBodyAim>();
+        if (aim == null)
+            aim = gameObject.AddComponent<UpperBodyAim>();
+
         aimYaw = transform.eulerAngles.y;
     }
 
@@ -96,30 +95,17 @@ public class PlayerController : MonoBehaviour
         Move();
     }
 
-    // 애니메이터가 포즈를 덮어쓴 뒤에 실행돼야 상체 오프셋이 살아남는다.
+    // 몸이 다 돈 뒤에 카메라를 맞춰야 한 프레임 어긋나지 않는다. 상체 비틀기는 UpperBodyAim이 한다.
     private void LateUpdate()
     {
-        float yawOffset = YawOffset();
-        cameraPivot.localRotation = Quaternion.Euler(pitch, yawOffset, 0f);
-
-        // 부모 본을 돌리면 자식도 따라 돌기 때문에, 본마다 같은 몫을 더하면
-        // 가슴에 도달했을 때 정확히 yawOffset 만큼 비틀린다.
-        Vector3 aimRight = Quaternion.Euler(0f, aimYaw, 0f) * Vector3.right;
-        float yawPerBone = yawOffset / spineBones.Length;
-        float pitchPerBone = pitch * spinePitchWeight / spineBones.Length;
-
-        foreach (Transform bone in spineBones)
-        {
-            bone.rotation = Quaternion.AngleAxis(yawPerBone, Vector3.up)
-                          * Quaternion.AngleAxis(pitchPerBone, aimRight)
-                          * bone.rotation;
-        }
+        cameraPivot.localRotation = Quaternion.Euler(pitch, aim.YawOffset, 0f);
     }
 
     private void Look()
     {
         aimYaw += input.Look.x * mouseSensitivity;
         pitch = Mathf.Clamp(pitch - input.Look.y * mouseSensitivity, minPitch, maxPitch);
+        aim.SetAim(aimYaw, pitch);
     }
 
     private void Move()
@@ -128,7 +114,7 @@ public class PlayerController : MonoBehaviour
         if (move.sqrMagnitude > 1f)
             move.Normalize();
 
-        TurnBody(move.sqrMagnitude > 0.01f);
+        aim.TurnBody(move.sqrMagnitude > 0.01f);
 
         // 착지 상태에서 살짝 눌러줘야 CharacterController가 경사면에서 붕 뜨지 않는다.
         // 점프로 이미 위로 튄 프레임을 덮지 않도록 하강 중일 때만 누른다.
@@ -152,23 +138,5 @@ public class PlayerController : MonoBehaviour
         // 도약부터, 하강이면 곧장 체공으로 들어가므로 낙하도 같은 길로 처리된다.
         animator.SetBool(IsGrounded, controller.isGrounded);
         animator.SetFloat(VerticalVelocity, verticalVelocity);
-    }
-
-    // 이동 중이면 하체를 에임에 붙이고, 멈춰 있으면 비틀림이 임계값을 넘을 때만
-    // 제자리에서 따라 돈다.
-    private void TurnBody(bool moving)
-    {
-        float yawOffset = YawOffset();
-        if (!moving && Mathf.Abs(yawOffset) <= turnThreshold)
-            return;
-
-        float target = moving ? aimYaw : aimYaw - Mathf.Sign(yawOffset) * turnThreshold;
-        float yaw = Mathf.MoveTowardsAngle(transform.eulerAngles.y, target, bodyTurnSpeed * Time.deltaTime);
-        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
-    }
-
-    private float YawOffset()
-    {
-        return Mathf.DeltaAngle(transform.eulerAngles.y, aimYaw);
     }
 }
