@@ -29,6 +29,7 @@ public class WorldHealthBar : MonoBehaviour
         {
             health.Damaged += OnDamaged;
             health.Changed += OnChanged;
+            health.Died += OnDied;
         }
     }
 
@@ -38,6 +39,7 @@ public class WorldHealthBar : MonoBehaviour
         {
             health.Damaged -= OnDamaged;
             health.Changed -= OnChanged;
+            health.Died -= OnDied;
         }
     }
 
@@ -49,8 +51,18 @@ public class WorldHealthBar : MonoBehaviour
 
     private void OnDamaged()
     {
+        // 죽는 한 방도 피격이라 여기로 온다. 죽었으면 띄우지 않는다.
+        if (!health.IsAlive)
+            return;
+
         visual.SetActive(true);
         hideTime = Time.time + hideDelay;
+    }
+
+    // Respawner는 메시만 숨기고 UI는 건드리지 않아서 여기서 직접 끈다.
+    private void OnDied()
+    {
+        visual.SetActive(false);
     }
 
     private void OnChanged(float current, float max)
