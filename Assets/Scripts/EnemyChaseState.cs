@@ -21,6 +21,12 @@ public class EnemyChaseState : EnemyState
             return;
         }
 
+        if (Vector3.Distance(ai.transform.position, ai.Target.transform.position) <= ai.Attack.Range)
+        {
+            ai.ChangeState(ai.Attack);
+            return;
+        }
+
         ai.Agent.SetDestination(ai.Target.transform.position);
         ai.LookAtTarget();
     }

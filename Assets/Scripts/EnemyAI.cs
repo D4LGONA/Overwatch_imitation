@@ -29,6 +29,15 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private EnemyIdleState idle = new EnemyIdleState();
     [SerializeField] private EnemyChaseState chase = new EnemyChaseState();
     [SerializeField] private EnemyAlertState alert = new EnemyAlertState();
+    [SerializeField] private EnemyAttackState attack = new EnemyAttackState();
+
+    [Header("Animation")]
+    [Tooltip("비워두면 자식에서 찾는다. AC_Player처럼 MoveX, MoveY 파라미터가 있어야 한다.")]
+    [SerializeField] private Animator animator;
+    [SerializeField] private float animationDamp = 0.1f;
+
+    private static readonly int MoveX = Animator.StringToHash("MoveX");
+    private static readonly int MoveY = Animator.StringToHash("MoveY");
 
     // 매 프레임 씬을 뒤지면 무거워서 이 간격으로만 상대를 찾는다.
     private const float ScanInterval = 0.2f;
@@ -36,6 +45,7 @@ public class EnemyAI : MonoBehaviour
 
     private Health health;
     private UpperBodyAim aim;
+    private ArmAim armAim;
     private EnemyState current;
     private float nextScanTime;
 
@@ -53,16 +63,32 @@ public class EnemyAI : MonoBehaviour
     public EnemyIdleState Idle => idle;
     public EnemyChaseState Chase => chase;
     public EnemyAlertState Alert => alert;
+    public EnemyAttackState Attack => attack;
+
+    public Health Self => health;
+    public Vector3 EyePosition => transform.position + Vector3.up * eyeHeight;
+
+    // 지금 실제로 겨누고 있는 방향. 조준이 천천히 돌기 때문에 목표 방향과 다를 수 있다.
+    public Vector3 AimDirection => Quaternion.Euler(aimPitch, AimYaw, 0f) * Vector3.forward;
+
+    // 지금 겨누는 방향이 보려는 방향에서 좌우로 몇 도 벗어나 있는지.
+    public float AimError => Mathf.Abs(Mathf.DeltaAngle(AimYaw, wantYaw));
 
     private void Awake()
     {
         Agent = GetComponent<NavMeshAgent>();
         health = GetComponent<Health>();
+        if (animator == null)
+            animator = GetComponentInChildren<Animator>();
         Home = guardPoint != null ? guardPoint.position : transform.position;
 
         aim = GetComponent<UpperBodyAim>();
         if (aim == null)
             aim = gameObject.AddComponent<UpperBodyAim>();
+
+        armAim = GetComponent<ArmAim>();
+        if (armAim == null)
+            armAim = gameObject.AddComponent<ArmAim>();
 
         // 에이전트가 몸을 이동 방향으로 돌려버리면 상체가 먼저 도는 연출이 안 된다.
         // 몸 회전은 UpperBodyAim에 맡긴다.
@@ -72,6 +98,7 @@ public class EnemyAI : MonoBehaviour
         idle.Init(this);
         chase.Init(this);
         alert.Init(this);
+        attack.Init(this);
     }
 
     private void OnEnable()
@@ -89,11 +116,11 @@ public class EnemyAI : MonoBehaviour
         health.Damaged -= OnDamaged;
     }
 
-    // 맞으면 때린 쪽을 돌아본다. 이미 쫓고 있으면 그대로 둔다.
+    // 맞으면 때린 쪽을 돌아본다. 이미 쫓거나 싸우고 있으면 그대로 둔다.
     private void OnDamaged()
     {
         Health attacker = health.LastAttacker;
-        if (attacker == null || !health.IsAlive || current == chase)
+        if (attacker == null || !health.IsAlive || current == chase || current == attack)
             return;
 
         alert.SetAlert(attacker.transform.position);
@@ -136,9 +163,29 @@ public class EnemyAI : MonoBehaviour
         lookRequested = false;
         current.Tick();
         UpdateAim();
+        UpdateAnimation();
+    }
+
+    // 걷는 속도를 몸 기준으로 바꿔 넘긴다. 상체가 상대를 보며 옆으로 걸으면 옆걸음이 나온다.
+    // 블렌드 트리가 -1~1 범위라 최고 속도로 나눠서 맞춘다.
+    private void UpdateAnimation()
+    {
+        if (animator == null || animator.runtimeAnimatorController == null)
+            return;
+
+        float maxSpeed = Mathf.Max(Agent.speed, 0.01f);
+        Vector3 local = transform.InverseTransformDirection(Agent.velocity) / maxSpeed;
+
+        animator.SetFloat(MoveX, local.x, animationDamp, Time.deltaTime);
+        animator.SetFloat(MoveY, local.z, animationDamp, Time.deltaTime);
     }
 
     // ---------- 조준 ----------
+
+    public void SetArmAiming(bool on)
+    {
+        armAim.SetAiming(on);
+    }
 
     // 상태가 이번 프레임에 볼 방향을 정한다.
     public void LookYaw(float yaw)
@@ -187,8 +234,6 @@ public class EnemyAI : MonoBehaviour
     }
 
     // ---------- 시야 ----------
-
-    private Vector3 EyePosition => transform.position + Vector3.up * eyeHeight;
 
     // 살아 있는 다른 팀 중 보이는 가장 가까운 상대를 고른다.
     private void Scan()
