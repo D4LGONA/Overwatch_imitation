@@ -411,7 +411,7 @@ public class Tracer : MonoBehaviour
     // 적에게 준 피해만 궁극기를 채운다. 아군 오사나 자해로는 차면 안 된다.
     private void DealDamage(Health target, float amount)
     {
-        target.TakeDamage(amount);
+        target.TakeDamage(amount, health);
         if (ultimate != null)
             ultimate.Add(amount);
     }

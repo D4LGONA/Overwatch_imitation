@@ -38,11 +38,15 @@ public class Health : MonoBehaviour
     // 되감기처럼 잠시 피해를 받지 않아야 하는 구간에서 켠다.
     public bool IsInvulnerable { get; set; }
 
-    public void TakeDamage(float amount)
+    // 마지막으로 나를 때린 상대. 맞았을 때 돌아보는 AI처럼, Damaged를 받은 쪽이 읽는다.
+    public Health LastAttacker { get; private set; }
+
+    public void TakeDamage(float amount, Health attacker = null)
     {
         if (!IsAlive || IsInvulnerable)
             return;
 
+        LastAttacker = attacker;
         Current = Mathf.Max(0f, Current - amount);
         Changed?.Invoke(Current, maxHealth);
         Damaged?.Invoke();

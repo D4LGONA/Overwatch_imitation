@@ -1,65 +1,124 @@
 using UnityEngine;
 using UnityEngine.AI;
 
-// 적 AI. 상태 하나에 할 일 하나만 두고, 조건이 맞으면 다른 상태로 넘어간다.
+// 적 AI의 상태 기계. 지금 상태 하나만 들고 매 프레임 그 상태의 Tick을 부른다.
+// 상태들이 같이 쓰는 시야, 조준, 길찾기는 여기에 두고, 무엇을 할지는 각 상태가 정한다.
 [RequireComponent(typeof(NavMeshAgent))]
 [RequireComponent(typeof(Health))]
 public class EnemyAI : MonoBehaviour
 {
-    private enum State
-    {
-        Guard,  // 지키는 자리에 서 있는다
-        Chase,  // 상대를 쫓아간다
-    }
-
     [Header("Sight")]
     [SerializeField] private float sightRange = 20f;
+    [Tooltip("시야 원뿔의 전체 각도. 상체가 보는 방향 기준으로 이 안에 들어와야 보인다.")]
+    [Range(1f, 360f)]
+    [SerializeField] private float viewAngle = 110f;
     [Tooltip("눈 높이. 여기서 상대 가슴 쪽으로 선을 그어 가리는 게 없으면 보인다고 친다.")]
     [SerializeField] private float eyeHeight = 1.6f;
     [Tooltip("시야를 가리는 것. 벽, 바닥, 캐릭터 레이어를 넣는다.")]
     [SerializeField] private LayerMask sightMask = ~0;
-    [Tooltip("상대를 놓친 뒤에도 마지막으로 본 자리까지 쫓아가는 시간.")]
-    [SerializeField] private float loseSightTime = 3f;
+
+    [Header("Aim")]
+    [Tooltip("조준(상체)이 목표를 향해 초당 몇 도씩 도는지. 즉시 따라가면 기계 같고, 점멸로 피하는 의미가 없어진다.")]
+    [SerializeField] private float aimTurnSpeed = 220f;
 
     [Header("Guard")]
-    [Tooltip("지킬 자리. 비워두면 처음 서 있던 자리.")]
+    [Tooltip("지킬 곳. 거점을 넣는다. 비워두면 처음 서 있던 자리.")]
     [SerializeField] private Transform guardPoint;
+
+    [Header("States")]
+    [SerializeField] private EnemyIdleState idle = new EnemyIdleState();
+    [SerializeField] private EnemyChaseState chase = new EnemyChaseState();
+    [SerializeField] private EnemyAlertState alert = new EnemyAlertState();
 
     // 매 프레임 씬을 뒤지면 무거워서 이 간격으로만 상대를 찾는다.
     private const float ScanInterval = 0.2f;
+    private const float ChestHeight = 1.2f;
 
-    private NavMeshAgent agent;
     private Health health;
-    private State state;
-    private Vector3 home;
-
-    private Health target;
-    private bool targetVisible;
-    private Vector3 lastSeenPosition;
-    private float lastSeenTime;
+    private UpperBodyAim aim;
+    private EnemyState current;
     private float nextScanTime;
+
+    private float aimPitch;
+    private bool lookRequested;
+    private float wantYaw;
+    private float wantPitch;
+
+    public NavMeshAgent Agent { get; private set; }
+    public Vector3 Home { get; private set; }
+    public Health Target { get; private set; }
+    public bool TargetVisible { get; private set; }
+    public float AimYaw { get; private set; }
+
+    public EnemyIdleState Idle => idle;
+    public EnemyChaseState Chase => chase;
+    public EnemyAlertState Alert => alert;
 
     private void Awake()
     {
-        agent = GetComponent<NavMeshAgent>();
+        Agent = GetComponent<NavMeshAgent>();
         health = GetComponent<Health>();
-        home = guardPoint != null ? guardPoint.position : transform.position;
+        Home = guardPoint != null ? guardPoint.position : transform.position;
+
+        aim = GetComponent<UpperBodyAim>();
+        if (aim == null)
+            aim = gameObject.AddComponent<UpperBodyAim>();
+
+        // 에이전트가 몸을 이동 방향으로 돌려버리면 상체가 먼저 도는 연출이 안 된다.
+        // 몸 회전은 UpperBodyAim에 맡긴다.
+        Agent.updateRotation = false;
+        AimYaw = transform.eulerAngles.y;
+
+        idle.Init(this);
+        chase.Init(this);
+        alert.Init(this);
     }
 
-    private void OnEnable() => health.Revived += OnRevived;
+    private void OnEnable()
+    {
+        health.Revived += OnRevived;
+        health.Damaged += OnDamaged;
+    }
 
     private void OnDisable()
     {
-        if (health != null)
-            health.Revived -= OnRevived;
+        if (health == null)
+            return;
+
+        health.Revived -= OnRevived;
+        health.Damaged -= OnDamaged;
+    }
+
+    // 맞으면 때린 쪽을 돌아본다. 이미 쫓고 있으면 그대로 둔다.
+    private void OnDamaged()
+    {
+        Health attacker = health.LastAttacker;
+        if (attacker == null || !health.IsAlive || current == chase)
+            return;
+
+        alert.SetAlert(attacker.transform.position);
+        if (current != alert)
+            ChangeState(alert);
+    }
+
+    private void Start()
+    {
+        ChangeState(idle);
     }
 
     // 부활하면 쫓던 상대를 잊고 다시 지키는 것부터 시작한다.
     private void OnRevived()
     {
-        target = null;
-        targetVisible = false;
-        state = State.Guard;
+        Target = null;
+        TargetVisible = false;
+        ChangeState(idle);
+    }
+
+    public void ChangeState(EnemyState next)
+    {
+        current?.Exit();
+        current = next;
+        current.Enter();
     }
 
     private void Update()
@@ -73,35 +132,63 @@ public class EnemyAI : MonoBehaviour
             Scan();
         }
 
-        switch (state)
-        {
-            case State.Guard: UpdateGuard(); break;
-            case State.Chase: UpdateChase(); break;
-        }
+        // 상태가 이번 프레임에 어디를 볼지 정하지 않으면 걸어가는 방향을 본다.
+        lookRequested = false;
+        current.Tick();
+        UpdateAim();
     }
 
-    private void UpdateGuard()
+    // ---------- 조준 ----------
+
+    // 상태가 이번 프레임에 볼 방향을 정한다.
+    public void LookYaw(float yaw)
     {
-        agent.SetDestination(home);
-
-        if (targetVisible)
-            state = State.Chase;
+        lookRequested = true;
+        wantYaw = yaw;
+        wantPitch = 0f;
     }
 
-    private void UpdateChase()
+    public void LookAtTarget()
     {
-        if (target == null || !target.IsAlive)
+        if (Target != null)
+            LookAt(Target.transform.position);
+    }
+
+    // 어떤 캐릭터가 서 있는 자리를 본다. 발밑이 아니라 가슴 높이를 겨눈다.
+    public void LookAt(Vector3 characterPosition)
+    {
+        Vector3 toTarget = characterPosition + Vector3.up * ChestHeight - EyePosition;
+        lookRequested = true;
+        wantYaw = Mathf.Atan2(toTarget.x, toTarget.z) * Mathf.Rad2Deg;
+        // 아래를 볼수록 양수다. 플레이어 카메라의 pitch와 같은 방향.
+        wantPitch = -Mathf.Atan2(toTarget.y, new Vector2(toTarget.x, toTarget.z).magnitude) * Mathf.Rad2Deg;
+    }
+
+    // 상체가 먼저 돌고, 하체는 멈춰 있을 땐 비틀림이 커질 때만, 걸을 땐 바로 따라온다.
+    private void UpdateAim()
+    {
+        Vector3 velocity = Agent.velocity;
+        velocity.y = 0f;
+        bool moving = velocity.sqrMagnitude > 0.01f;
+
+        if (!lookRequested)
         {
-            state = State.Guard;
-            return;
+            wantYaw = moving ? Quaternion.LookRotation(velocity).eulerAngles.y : AimYaw;
+            wantPitch = 0f;
         }
 
-        // 보이는 동안은 상대에게, 안 보이면 마지막으로 본 자리로 간다.
-        agent.SetDestination(targetVisible ? target.transform.position : lastSeenPosition);
+        // 목표 방향으로 한 번에 돌지 않고 초당 aimTurnSpeed 만큼만 돈다.
+        float step = aimTurnSpeed * Time.deltaTime;
+        AimYaw = Mathf.MoveTowardsAngle(AimYaw, wantYaw, step);
+        aimPitch = Mathf.MoveTowards(aimPitch, wantPitch, step);
 
-        if (!targetVisible && Time.time - lastSeenTime > loseSightTime)
-            state = State.Guard;
+        aim.SetAim(AimYaw, aimPitch);
+        aim.TurnBody(moving);
     }
+
+    // ---------- 시야 ----------
+
+    private Vector3 EyePosition => transform.position + Vector3.up * eyeHeight;
 
     // 살아 있는 다른 팀 중 보이는 가장 가까운 상대를 고른다.
     private void Scan()
@@ -122,13 +209,9 @@ public class EnemyAI : MonoBehaviour
             }
         }
 
-        targetVisible = best != null;
-        if (targetVisible)
-        {
-            target = best;
-            lastSeenPosition = best.transform.position;
-            lastSeenTime = Time.time;
-        }
+        TargetVisible = best != null;
+        if (TargetVisible)
+            Target = best;
     }
 
     private bool CanSee(Health candidate, float distance)
@@ -136,8 +219,16 @@ public class EnemyAI : MonoBehaviour
         if (distance > sightRange)
             return false;
 
-        Vector3 eye = transform.position + Vector3.up * eyeHeight;
-        Vector3 chest = candidate.transform.position + Vector3.up * 1.2f;
+        Vector3 eye = EyePosition;
+        Vector3 chest = candidate.transform.position + Vector3.up * ChestHeight;
+
+        // 상체가 보는 방향에서 좌우로 viewAngle의 절반 안에 있어야 보인다.
+        // 높이는 따지지 않아서 위아래로는 원뿔이 아니라 부채꼴이다.
+        Vector3 toTarget = chest - eye;
+        toTarget.y = 0f;
+        Vector3 facing = Quaternion.Euler(0f, AimYaw, 0f) * Vector3.forward;
+        if (Vector3.Angle(facing, toTarget) > viewAngle * 0.5f)
+            return false;
 
         // 선이 처음 닿은 게 그 상대 자신이면 가리는 게 없다는 뜻이다. 눈이 자기 몸
         // 안에서 출발하므로 자기 콜라이더에는 닿지 않는다.
@@ -147,13 +238,31 @@ public class EnemyAI : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
+        // 시야 부채꼴의 양쪽 끝을 선으로 그린다.
         Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, sightRange);
+        float yaw = Application.isPlaying ? AimYaw : transform.eulerAngles.y;
+        Vector3 eyePos = EyePosition;
+        Vector3 left = Quaternion.Euler(0f, yaw - viewAngle * 0.5f, 0f) * Vector3.forward;
+        Vector3 right = Quaternion.Euler(0f, yaw + viewAngle * 0.5f, 0f) * Vector3.forward;
+        Gizmos.DrawLine(eyePos, eyePos + left * sightRange);
+        Gizmos.DrawLine(eyePos, eyePos + right * sightRange);
+        Gizmos.DrawLine(eyePos + left * sightRange, eyePos + right * sightRange);
 
-        if (Application.isPlaying && target != null)
+        // 돌아다니는 범위.
+        Gizmos.color = Color.cyan;
+        Vector3 center = Application.isPlaying ? Home : (guardPoint != null ? guardPoint.position : transform.position);
+        Gizmos.DrawWireSphere(center, idle.PatrolRadius);
+
+        if (Application.isPlaying && Target != null)
         {
-            Gizmos.color = targetVisible ? Color.red : Color.gray;
-            Gizmos.DrawLine(transform.position + Vector3.up * eyeHeight, target.transform.position + Vector3.up * 1.2f);
+            Gizmos.color = TargetVisible ? Color.red : Color.gray;
+            Gizmos.DrawLine(eyePos, Target.transform.position + Vector3.up * ChestHeight);
         }
+
+        // 지금 상태 이름을 머리 위에 띄운다.
+#if UNITY_EDITOR
+        if (Application.isPlaying && current != null)
+            UnityEditor.Handles.Label(transform.position + Vector3.up * 2.3f, current.GetType().Name);
+#endif
     }
 }

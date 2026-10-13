@@ -60,7 +60,7 @@ public class PulseBomb : MonoBehaviour
 
             float distance = Vector3.Distance(transform.position, target.transform.position);
             float falloff = Mathf.Lerp(1f, minDamageRatio, Mathf.Clamp01(distance / radius));
-            target.TakeDamage(maxDamage * falloff);
+            target.TakeDamage(maxDamage * falloff, owner);
         }
 
         Destroy(gameObject);
