@@ -22,6 +22,11 @@ public class UltimateCharge : MonoBehaviour
         if (IsReady)
             return;
 
+        // 판 시작 전 준비 시간에는 저절로 차지 않는다. 죽어서 부활을 기다리는 동안은 찬다.
+        MatchManager match = GameManager.Instance != null ? GameManager.Instance.Match : null;
+        if (match != null && match.IsSetup)
+            return;
+
         Add(passivePerSecond * Time.deltaTime);
     }
 
