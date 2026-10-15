@@ -14,10 +14,13 @@ public class CapturePointUI : MonoBehaviour
     [SerializeField] private Image fill;
     [SerializeField] private TMP_Text label;
     [SerializeField] private TMP_Text percent;
+    [Tooltip("양 팀이 함께 거점에 있을 때만 켜지는 표시. 비워둬도 된다.")]
+    [SerializeField] private GameObject contestedLabel;
 
     [SerializeField] private Color lockedColor = new Color(0.4f, 0.4f, 0.4f, 1f);
     [SerializeField] private Color openColor = Color.white;
     [SerializeField] private Color capturedColor = new Color(0.3f, 0.6f, 1f, 1f);
+    [SerializeField] private Color contestedColor = new Color(1f, 0.6f, 0.1f, 1f);
 
     private void OnEnable()
     {
@@ -27,6 +30,7 @@ public class CapturePointUI : MonoBehaviour
         point.ProgressChanged += OnProgressChanged;
         point.Captured += OnStateChanged;
         point.Unlocked += OnStateChanged;
+        point.ContestedChanged += OnContestedChanged;
     }
 
     private void OnDisable()
@@ -37,6 +41,7 @@ public class CapturePointUI : MonoBehaviour
         point.ProgressChanged -= OnProgressChanged;
         point.Captured -= OnStateChanged;
         point.Unlocked -= OnStateChanged;
+        point.ContestedChanged -= OnContestedChanged;
     }
 
     // 거점의 Awake가 끝난 뒤에 처음 상태를 그려야 잠김 여부가 맞게 나온다.
@@ -52,12 +57,20 @@ public class CapturePointUI : MonoBehaviour
 
     private void OnStateChanged(CapturePoint _) => Refresh();
 
+    private void OnContestedChanged(bool _) => Refresh();
+
     private void Refresh()
     {
         if (point == null)
             return;
 
-        Color color = point.IsCaptured ? capturedColor : point.IsLocked ? lockedColor : openColor;
+        Color color = point.IsCaptured ? capturedColor
+            : point.IsLocked ? lockedColor
+            : point.IsContested ? contestedColor
+            : openColor;
+
+        if (contestedLabel != null)
+            contestedLabel.SetActive(point.IsContested);
 
         if (background != null)
             background.color = color;

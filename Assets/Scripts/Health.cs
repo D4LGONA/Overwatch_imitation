@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 // 체력을 가진 모든 대상이 붙인다. 아군 오사를 막는 판정도 여기서 하므로
@@ -6,11 +7,11 @@ using UnityEngine;
 public class Health : MonoBehaviour
 {
     [SerializeField] private float maxHealth = 150f;
-    [SerializeField] private int team;
+    [SerializeField] private Team team;
 
     public float Current { get; private set; }
     public float Max => maxHealth;
-    public int Team => team;
+    public Team Team => team;
     public bool IsAlive => Current > 0f;
 
     // 값이 바뀔 때만 알린다. UI가 매 프레임 들여다볼 필요가 없다.
@@ -24,10 +25,30 @@ public class Health : MonoBehaviour
     public event Action Died;
     public event Action Revived;
 
+    // 누군가 죽은 순간 (죽은 쪽, 죽인 쪽). 킬로그처럼 특정 캐릭터가 아니라 전체를 지켜봐야 하는 쪽이 쓴다.
+    // 캐릭터가 코드로 생성되기도 해서 하나하나 구독하는 대신 한 곳에서 알린다.
+    public static event Action<Health, Health> AnyKilled;
+
+    // 켜져 있는 모든 체력. AI가 상대를 찾을 때마다 씬 전체를 뒤지지 않도록 여기에 모아둔다.
+    private static readonly List<Health> all = new List<Health>();
+    public static IReadOnlyList<Health> All => all;
+
     private void Awake()
     {
         Current = maxHealth;
     }
+
+    private void OnEnable() => all.Add(this);
+    private void OnDisable() => all.Remove(this);
+
+    // 같은 프리팹으로 아군과 적을 모두 만들기 때문에, 생성한 쪽이 팀을 정해준다.
+    public void SetTeam(Team value)
+    {
+        team = value;
+    }
+
+    // 다른 팀이면 true. 맞힐 수 있는지, 노릴 대상인지 판단할 때 쓴다.
+    public bool IsHostileTo(Health other) => other != null && other.team != team;
 
     private void Start()
     {
@@ -55,6 +76,7 @@ public class Health : MonoBehaviour
         {
             Debug.Log($"[Health] {name} 사망");
             Died?.Invoke();
+            AnyKilled?.Invoke(this, attacker);
         }
     }
 

@@ -40,6 +40,7 @@ public class PulseBomb : MonoBehaviour
 
         // 캐릭터에 붙으면 같이 움직여야 하므로 자식으로 들어간다.
         transform.SetParent(collision.transform, true);
+        SoundManager.Play(SoundId.PulseStick, transform.position);
         Invoke(nameof(Explode), fuseTime);
     }
 
@@ -55,7 +56,7 @@ public class PulseBomb : MonoBehaviour
 
             // 아군은 피해를 입지 않지만 던진 본인은 휘말린다.
             bool isOwner = target == owner;
-            if (!isOwner && owner != null && target.Team == owner.Team)
+            if (!isOwner && owner != null && !owner.IsHostileTo(target))
                 continue;
 
             float distance = Vector3.Distance(transform.position, target.transform.position);
@@ -63,6 +64,7 @@ public class PulseBomb : MonoBehaviour
             target.TakeDamage(maxDamage * falloff, owner);
         }
 
+        SoundManager.Play(SoundId.PulseExplode, transform.position);
         Destroy(gameObject);
     }
 

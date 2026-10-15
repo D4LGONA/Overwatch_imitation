@@ -1,7 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// 캐릭터 머리 위에 뜨는 체력바. 맞았을 때만 나타나고 잠시 뒤 사라진다.
+// 캐릭터 머리 위에 뜨는 체력바. 적은 맞았을 때만 잠깐 빨갛게 뜨고,
+// 아군은 원작처럼 늘 파랗게 떠 있다.
 public class WorldHealthBar : MonoBehaviour
 {
     [Tooltip("비워두면 부모에서 찾는다.")]
@@ -11,9 +12,12 @@ public class WorldHealthBar : MonoBehaviour
     [Tooltip("보이고 숨길 대상. 비워두면 이 오브젝트를 쓴다.")]
     [SerializeField] private GameObject visual;
     [SerializeField] private float hideDelay = 3f;
+    [SerializeField] private Color allyColor = new Color(0.3f, 0.7f, 1f, 1f);
+    [SerializeField] private Color enemyColor = new Color(1f, 0.25f, 0.25f, 1f);
 
     private Camera viewCamera;
     private float hideTime;
+    private bool isAlly;
 
     private void Awake()
     {
@@ -30,6 +34,7 @@ public class WorldHealthBar : MonoBehaviour
             health.Damaged += OnDamaged;
             health.Changed += OnChanged;
             health.Died += OnDied;
+            health.Revived += OnRevived;
         }
     }
 
@@ -40,13 +45,36 @@ public class WorldHealthBar : MonoBehaviour
             health.Damaged -= OnDamaged;
             health.Changed -= OnChanged;
             health.Died -= OnDied;
+            health.Revived -= OnRevived;
         }
     }
 
+    // 팀은 생성한 쪽이 Awake 뒤에 정해주므로 Start에서 본다.
     private void Start()
     {
         viewCamera = Camera.main;
         visual.SetActive(false);
+        PlayerController.WhenReady(SetSide);
+    }
+
+    // 플레이어 기준으로 아군인지 정한다. 내 체력바는 HUD에 있으니 머리 위엔 띄우지 않는다.
+    private void SetSide(PlayerController player)
+    {
+        if (this == null)
+            return;
+
+        isAlly = player.Health != health && !player.Health.IsHostileTo(health);
+
+        if (fill != null)
+            fill.color = isAlly ? allyColor : enemyColor;
+
+        visual.SetActive(isAlly && health.IsAlive);
+    }
+
+    private void OnRevived()
+    {
+        if (isAlly)
+            visual.SetActive(true);
     }
 
     private void OnDamaged()
@@ -77,7 +105,7 @@ public class WorldHealthBar : MonoBehaviour
         if (!visual.activeSelf)
             return;
 
-        if (Time.time >= hideTime)
+        if (!isAlly && Time.time >= hideTime)
         {
             visual.SetActive(false);
             return;

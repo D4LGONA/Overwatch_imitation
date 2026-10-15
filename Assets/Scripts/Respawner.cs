@@ -15,6 +15,11 @@ public class Respawner : MonoBehaviour
     private Health health;
     private Renderer[] bodyRenderers;
     private Collider[] bodyColliders;
+    private float respawnTime;
+
+    // 죽어 있으면 true. 죽음 화면이 부활까지 남은 시간을 셀 때 쓴다.
+    public bool IsWaiting { get; private set; }
+    public float RespawnRemaining => IsWaiting ? Mathf.Max(0f, respawnTime - Time.time) : 0f;
 
     private void Awake()
     {
@@ -22,6 +27,12 @@ public class Respawner : MonoBehaviour
         bodyRenderers = GetComponentsInChildren<Renderer>();
         // CharacterController도 Collider라서 캐릭터든 큐브든 같이 잡힌다.
         bodyColliders = GetComponentsInChildren<Collider>();
+    }
+
+    // 코드로 생성한 캐릭터는 프리팹이 씬의 스폰 지점을 참조할 수 없어서 생성한 쪽이 넣어준다.
+    public void SetSpawnPoints(Transform[] points)
+    {
+        spawnPoints = points;
     }
 
     private void OnEnable() => health.Died += OnDied;
@@ -40,9 +51,12 @@ public class Respawner : MonoBehaviour
     private IEnumerator RespawnRoutine()
     {
         SetAlive(false);
+        IsWaiting = true;
+        respawnTime = Time.time + respawnDelay;
         Debug.Log($"[Respawner] {name} {respawnDelay}초 뒤 부활");
 
         yield return new WaitForSeconds(respawnDelay);
+        IsWaiting = false;
 
         if (spawnPoints != null && spawnPoints.Length > 0)
         {

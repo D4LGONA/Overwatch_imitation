@@ -1227,6 +1227,9 @@ GameObject:
   - component: {fileID: 5409765763593929517}
   - component: {fileID: 5015224608205269650}
   - component: {fileID: 961807924754525638}
+  - component: {fileID: 6120458831904417201}
+  - component: {fileID: 6120458831904417202}
+  - component: {fileID: 6120458831904417203}
   m_Layer: 6
   m_Name: Character
   m_TagString: Untagged
@@ -1409,7 +1412,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e136d26cfa0b4c579cf631eb522e18e4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  respawnDelay: 3
+  respawnDelay: 10
   spawnPoints: []
   disableWhileDead:
   - {fileID: 3823238725892314604}
@@ -2379,7 +2382,7 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.3
+  near clip plane: 0.05
   far clip plane: 1000
   field of view: 60
   orthographic: 0
@@ -2643,3 +2646,50 @@ Transform:
   - {fileID: 4920363953606881407}
   m_Father: {fileID: 3321192478453888810}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6120458831904417201
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4279541069908522419}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 679e94f152621e64ca677959670e0d4b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &6120458831904417202
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4279541069908522419}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 21baa175aef4b2a4b9f1d5790b24b4d6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  upperArm: {fileID: 0}
+  foreArm: {fileID: 0}
+  hand: {fileID: 0}
+  blendTime: 0.2
+  bothArms: 1
+  followPitch: 1
+  aimOnStart: 1
+--- !u!114 &6120458831904417203
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4279541069908522419}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef9bf2ed26ae4aacbc0005128924ce86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  body: {fileID: 0}
+  armBoneKeywords:
+  - Arm
+  - Hand

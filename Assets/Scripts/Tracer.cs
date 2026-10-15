@@ -313,6 +313,7 @@ public class Tracer : MonoBehaviour
         if (isRecalling || Time.time < recallReadyTime || history.Count == 0)
             return;
 
+        SoundManager.Play(SoundId.Recall);
         StartCoroutine(RecallRoutine());
     }
 
@@ -404,6 +405,7 @@ public class Tracer : MonoBehaviour
         Vector3 origin = aimSource.position + aimSource.forward * throwOffset;
         PulseBomb bomb = Instantiate(pulseBombPrefab, origin, aimSource.rotation);
         bomb.Launch(aimSource.forward * throwSpeed, health);
+        SoundManager.Play(SoundId.PulseThrow);
 
         ultimate.Consume();
     }
@@ -412,6 +414,8 @@ public class Tracer : MonoBehaviour
     private void DealDamage(Health target, float amount)
     {
         target.TakeDamage(amount, health);
+        // 맞혔다는 손맛. 총·근접 모두 여기를 지난다.
+        SoundManager.Play(SoundId.HitMarker);
         if (ultimate != null)
             ultimate.Add(amount);
     }
@@ -422,12 +426,13 @@ public class Tracer : MonoBehaviour
             return;
 
         meleeReadyTime = Time.time + meleeCooldown;
+        SoundManager.Play(SoundId.Melee);
 
         // 레이 한 줄이면 가까이 붙은 상대도 놓치기 쉬워서 구체로 훑는다.
         if (Physics.SphereCast(aimSource.position, meleeRadius, aimSource.forward,
                 out RaycastHit hit, meleeRange, hitMask, QueryTriggerInteraction.Ignore)
             && hit.collider.TryGetComponent(out Health target)
-            && (health == null || target.Team != health.Team))
+            && (health == null || health.IsHostileTo(target)))
         {
             DealDamage(target, meleeDamage);
         }
@@ -450,6 +455,7 @@ public class Tracer : MonoBehaviour
 
         // Move를 쓰면 벽을 통과하지 않고 CharacterController가 알아서 막아준다.
         controller.Move(direction * blinkDistance);
+        SoundManager.Play(SoundId.Blink);
 
         blinkStock--;
         PushBlink();
@@ -464,6 +470,7 @@ public class Tracer : MonoBehaviour
 
         isReloading = true;
         reloadEndTime = Time.time + reloadTime;
+        SoundManager.Play(SoundId.Reload);
         Debug.Log("[Tracer] 재장전 시작");
     }
 
@@ -471,6 +478,7 @@ public class Tracer : MonoBehaviour
     {
         Vector3 origin = aimSource.position;
         Vector3 direction = SpreadDirection(aimSource.forward, spreadAngle); // 탄퍼짐
+        SoundManager.Play(SoundId.TracerFire);
 
         // 거점 영역 같은 트리거에 막히지 않도록 트리거는 무시한다.
         if (Physics.Raycast(origin, direction, out RaycastHit hit, range, hitMask, QueryTriggerInteraction.Ignore))
@@ -480,7 +488,7 @@ public class Tracer : MonoBehaviour
 
             // 팀이 다를 때만 맞는다. 아군 관통은 대상이 생긴 뒤에 RaycastAll로 넣는다.
             if (hit.collider.TryGetComponent(out Health target)
-                && (health == null || target.Team != health.Team))
+                && (health == null || health.IsHostileTo(target)))
             {
                 DealDamage(target, damage);
             }

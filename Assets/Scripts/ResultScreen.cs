@@ -11,6 +11,9 @@ public class ResultScreen : MonoBehaviour
     [SerializeField] private TMP_Text resultText;
     [Tooltip("없어도 된다. 있으면 누를 때 판을 다시 시작한다.")]
     [SerializeField] private Button restartButton;
+    [Tooltip("없어도 된다. 있으면 누를 때 타이틀 씬으로 돌아간다.")]
+    [SerializeField] private Button titleButton;
+    [SerializeField] private string titleScene = "Title";
 
     [SerializeField] private string victoryText = "Victory!";
     [SerializeField] private string defeatText = "Defeat";
@@ -23,6 +26,8 @@ public class ResultScreen : MonoBehaviour
 
         if (restartButton != null)
             restartButton.onClick.AddListener(Restart);
+        if (titleButton != null)
+            titleButton.onClick.AddListener(BackToTitle);
 
         // 싱글톤은 다른 스크립트의 Awake 순서와 엉키지 않도록 Start에서 꺼낸다.
         match = GameManager.Instance.Match;
@@ -35,29 +40,35 @@ public class ResultScreen : MonoBehaviour
             match.MatchEnded -= OnMatchEnded;
         if (restartButton != null)
             restartButton.onClick.RemoveListener(Restart);
+        if (titleButton != null)
+            titleButton.onClick.RemoveListener(BackToTitle);
     }
 
-    // 이 판은 공격팀(0)으로 플레이하니까 공격팀이 이기면 승리다.
+    // 플레이어가 고른 팀 기준으로 이겼는지 본다.
     private void OnMatchEnded(bool attackersWon)
     {
-        resultText.text = attackersWon ? victoryText : defeatText;
+        bool won = attackersWon == (GameManager.Instance.PlayerTeam == Team.Attack);
+        resultText.text = won ? victoryText : defeatText;
         panel.SetActive(true);
+        // 죽어 있는 채로 판이 끝나도 결과 소리는 들려야 한다.
+        SoundManager.SetMuted(false);
+        SoundManager.Play(won ? SoundId.Victory : SoundId.Defeat);
 
-        // 시간을 멈추면 이동·애니메이션·파티클·타이머가 선다. 하지만 마우스 회전이나
-        // 점멸처럼 시간에 곱해지지 않는 동작은 계속되므로 입력도 끊는다.
-        Time.timeScale = 0f;
-        foreach (InputReader input in FindObjectsOfType<InputReader>())
-            input.enabled = false;
-
-        // 버튼을 누를 수 있게 잠가둔 커서를 푼다.
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+        GameManager.Instance.SetPaused(true);
     }
 
     private void Restart()
     {
+        SoundManager.Play(SoundId.UiClick);
         // 되돌리지 않으면 새로 불러온 씬도 멈춘 채로 시작한다.
         Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    private void BackToTitle()
+    {
+        SoundManager.Play(SoundId.UiClick);
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(titleScene);
     }
 }

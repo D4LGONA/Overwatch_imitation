@@ -11,7 +11,7 @@ public class CapturePoint : MonoBehaviour
     [Tooltip("거점 위에 이름을 띄우는 텍스트. Point Name을 바꾸면 따라 바뀐다.")]
     [SerializeField] private TMP_Text nameLabel;
     [Tooltip("점령할 수 있는 팀.")]
-    [SerializeField] private int attackingTeam;
+    [SerializeField] private Team attackingTeam;
     [Tooltip("처음부터 끝까지 채우는 데 걸리는 시간.")]
     [SerializeField] private float captureTime = 10f;
     [Tooltip("진행도를 이 개수로 나눈 지점에 닿으면 그 아래로는 떨어지지 않는다. 1이면 체크포인트 없음.")]
@@ -28,6 +28,7 @@ public class CapturePoint : MonoBehaviour
     private float floor;
 
     public string PointName => pointName;
+    public Team AttackingTeam => attackingTeam;
     public float Progress { get; private set; }
     public bool IsLocked { get; private set; }
     public bool IsCaptured { get; private set; }
@@ -35,9 +36,13 @@ public class CapturePoint : MonoBehaviour
     // 양 팀이 함께 안에 있어서 게이지가 멈춘 상태. UI에서 "경합 중"을 띄울 때 쓴다.
     public bool IsContested { get; private set; }
 
+    // 공격팀이 한 명이라도 안에 있는지. 시간이 다 돼도 이게 참이면 연장전이 된다.
+    public bool HasAttackers { get; private set; }
+
     public event Action<float> ProgressChanged;
     public event Action<CapturePoint> Captured;
     public event Action<CapturePoint> Unlocked;
+    public event Action<bool> ContestedChanged;
 
     private void Awake()
     {
@@ -106,8 +111,9 @@ public class CapturePoint : MonoBehaviour
         defendersInside.RemoveWhere(h => h == null || !h.IsAlive);
 
         bool attackers = attackersInside.Count > 0;
+        HasAttackers = attackers;
         bool defenders = defendersInside.Count > 0;
-        IsContested = attackers && defenders;
+        SetContested(attackers && defenders);
 
         float before = Progress;
 
@@ -124,6 +130,16 @@ public class CapturePoint : MonoBehaviour
 
         if (Progress >= 1f)
             Capture();
+    }
+
+    // 바뀔 때만 알린다. 매 프레임 알리면 UI가 쓸데없이 계속 다시 그린다.
+    private void SetContested(bool contested)
+    {
+        if (IsContested == contested)
+            return;
+
+        IsContested = contested;
+        ContestedChanged?.Invoke(contested);
     }
 
     private void UpdateCheckpoint()
@@ -145,7 +161,8 @@ public class CapturePoint : MonoBehaviour
         IsCaptured = true;
         attackersInside.Clear();
         defendersInside.Clear();
-        IsContested = false;
+        SetContested(false);
+        HasAttackers = false;
         Debug.Log($"[CapturePoint] {pointName} 점령 완료");
 
         Captured?.Invoke(this);
@@ -174,5 +191,6 @@ public class CapturePoint : MonoBehaviour
         ProgressChanged = null;
         Captured = null;
         Unlocked = null;
+        ContestedChanged = null;
     }
 }

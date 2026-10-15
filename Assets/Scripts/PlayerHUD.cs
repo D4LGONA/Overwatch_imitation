@@ -21,8 +21,9 @@ public class PlayerHUD : MonoBehaviour
 
     public void SetAmmo(int current, int max)
     {
+        // 원작처럼 지금 값은 크게, 최대값은 작게.
         if (ammoText != null)
-            ammoText.text = $"{current} / {max}";
+            ammoText.text = $"{current}<size=50%> / {max}</size>";
     }
 
     public void SetHealth(float current, float max)
@@ -31,7 +32,7 @@ public class PlayerHUD : MonoBehaviour
             healthFill.fillAmount = max > 0f ? current / max : 0f;
 
         if (healthText != null)
-            healthText.text = $"{Mathf.CeilToInt(current)} / {Mathf.CeilToInt(max)}";
+            healthText.text = $"{Mathf.CeilToInt(current)}<size=50%> / {Mathf.CeilToInt(max)}</size>";
     }
 
     public void SetAbility(AbilitySlot slot, int charges, int maxCharges, float progress, float remaining)

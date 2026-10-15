@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -34,6 +35,12 @@ public class PlayerController : MonoBehaviour
     private static readonly int IsGrounded = Animator.StringToHash("IsGrounded");
     private static readonly int VerticalVelocity = Animator.StringToHash("VerticalVelocity");
 
+    // 지금 조작 중인 플레이어. UI들이 씬을 뒤지지 않고 여기서 받는다.
+    public static PlayerController Local { get; private set; }
+    private static event Action<PlayerController> LocalReady;
+
+    public Health Health { get; private set; }
+
     private CharacterController controller;
     private UpperBodyAim aim;
     private float aimYaw;
@@ -52,8 +59,41 @@ public class PlayerController : MonoBehaviour
         aim = GetComponent<UpperBodyAim>();
         if (aim == null)
             aim = gameObject.AddComponent<UpperBodyAim>();
+        if (GetComponent<Footsteps>() == null)
+            gameObject.AddComponent<Footsteps>();
 
         aimYaw = transform.eulerAngles.y;
+
+        Health = GetComponent<Health>();
+        Local = this;
+        LocalReady?.Invoke(this);
+        LocalReady = null;
+    }
+
+    private void OnDestroy()
+    {
+        if (Local == this)
+            Local = null;
+    }
+
+    // 스폰으로 옮긴다. CharacterController가 켜져 있으면 위치를 직접 바꿔도 덮어써서 잠깐 끈다.
+    public void Teleport(Vector3 position, Quaternion rotation)
+    {
+        controller.enabled = false;
+        transform.SetPositionAndRotation(position, rotation);
+        controller.enabled = true;
+        aimYaw = rotation.eulerAngles.y;
+        verticalVelocity = 0f;
+    }
+
+    // 플레이어가 이미 있으면 바로, 아직 없으면 생기는 순간 callback을 부른다.
+    // 지금은 씬에 처음부터 있지만, 고른 영웅을 생성하게 되면 UI가 플레이어보다 먼저 깨어날 수 있다.
+    public static void WhenReady(Action<PlayerController> callback)
+    {
+        if (Local != null)
+            callback(Local);
+        else
+            LocalReady += callback;
     }
 
     // 구독과 해지는 항상 짝으로 둔다. 종료 순서에 따라 input이 먼저 파괴될 수 있어
